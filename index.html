@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Exoplanet Explorer</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════════════════
+     HEADER / NAV
+════════════════════════════════════════════════════════════ -->
+<header class="app-header">
+  <div class="header-left">
+    <span class="app-title">🌌 Exoplanet Explorer</span>
+    <span id="score-display" class="score-display">Punkte: 0</span>
+    <span class="discovery-badge">
+      Planeten: <strong id="discovery-count">0</strong>
+    </span>
+  </div>
+  <nav class="nav-tabs">
+    <button class="nav-tab active" data-panel="starmap-panel">① Sternkarte</button>
+    <button class="nav-tab" data-panel="analysis-panel">② Analyse</button>
+    <button class="nav-tab" data-panel="travel-panel">③ Reise</button>
+    <button class="nav-tab" data-panel="log-panel">Logbuch</button>
+  </nav>
+</header>
+
+<!-- ════════════════════════════════════════════════════════════
+     MODULE 1 – STAR MAP
+════════════════════════════════════════════════════════════ -->
+<section id="starmap-panel" class="game-panel active">
+  <div class="panel-layout">
+
+    <!-- Canvases -->
+    <div class="canvas-stack">
+      <canvas id="star-map-canvas"    width="1100" height="640"></canvas>
+      <div id="star-tooltip" class="star-tooltip"></div>
+    </div>
+
+    <!-- Right sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-card">
+        <h3 class="card-title">Teleskop</h3>
+        <p class="hint-text">Bewege die Maus über die Karte · Zoom-Linse folgt dem Cursor</p>
+        <p class="hint-text">Klick = Stern auswählen</p>
+
+        <div class="star-info-block">
+          <div class="info-row"><span>Name</span><span id="star-name">—</span></div>
+          <div class="info-row"><span>Klasse</span><span id="star-class">—</span></div>
+          <div class="info-row"><span>Temperatur</span><span id="star-temp">—</span></div>
+          <div class="info-row"><span>Leuchtkraft</span><span id="star-lum">—</span></div>
+          <div class="info-row"><span>Entfernung</span><span id="star-dist">—</span></div>
+        </div>
+
+        <button id="btn-investigate" class="btn btn-primary" disabled>
+          Untersuchen
+        </button>
+
+        <!-- Loading bar (scan) -->
+        <div id="loading-bar" class="loading-bar" style="display:none">
+          <div id="loading-bar-fill" class="loading-bar-fill"></div>
+        </div>
+
+        <!-- Interpretation decision -->
+        <div id="interpretation-panel" class="interpretation-panel" style="display:none"></div>
+      </div>
+
+      <!-- Light curve -->
+      <div class="sidebar-card chart-card">
+        <h3 class="card-title">Lichtkurve</h3>
+        <div id="chart-placeholder" class="chart-placeholder" style="display:flex">
+          <span>Wähle einen Stern und klicke Untersuchen</span>
+        </div>
+        <canvas id="light-curve-canvas" width="420" height="200"></canvas>
+      </div>
+
+      <!-- Proceed button -->
+      <button id="btn-analyse-nav" class="btn btn-success" disabled
+              onclick="showPanel('analysis-panel')">
+        → Planeten analysieren
+      </button>
+    </aside>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     MODULE 2 – ANALYSIS
+════════════════════════════════════════════════════════════ -->
+<section id="analysis-panel" class="game-panel">
+  <div class="panel-layout">
+
+    <!-- Orbital simulation canvas -->
+    <div class="canvas-stack">
+      <canvas id="orbit-canvas" width="700" height="500"></canvas>
+    </div>
+
+    <!-- Right sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-card">
+        <h3 class="card-title">Planetenanalyse</h3>
+        <p class="hint-text">Transitsignal wird ausgewertet …</p>
+
+        <button id="btn-run-analysis" class="btn btn-primary">
+          Analyse starten
+        </button>
+
+        <!-- Analysis progress bar -->
+        <div id="analysis-bar" class="loading-bar" style="display:none">
+          <div id="analysis-bar-fill" class="loading-bar-fill" style="background:#aa44ff"></div>
+        </div>
+
+        <!-- Results table -->
+        <div id="analysis-results" style="display:none"></div>
+      </div>
+
+      <!-- Legend for orbit view -->
+      <div class="sidebar-card">
+        <h3 class="card-title">Legende</h3>
+        <div class="legend-item"><span class="legend-dot hz"></span>Lebenszone (grün)</div>
+        <div class="legend-item"><span class="legend-dot planet"></span>Planet</div>
+        <div class="legend-item"><span class="legend-dot orbit"></span>Orbitbahn</div>
+      </div>
+
+      <button id="btn-travel" class="btn btn-success" disabled
+              onclick="showPanel('travel-panel'); TravelPlannerUI.loadTarget(GameState.get('currentPlanet'))">
+        → Reise planen
+      </button>
+    </aside>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     MODULE 3 – TRAVEL PLANNER
+════════════════════════════════════════════════════════════ -->
+<section id="travel-panel" class="game-panel">
+  <div class="panel-layout">
+
+    <!-- Config column -->
+    <div class="travel-config">
+      <div class="sidebar-card">
+        <h3 class="card-title">Reiseziel</h3>
+        <div class="info-row"><span>Stern</span><span id="travel-target-name">—</span></div>
+        <div class="info-row"><span>Entfernung</span><span id="travel-distance">—</span></div>
+        <div class="info-row"><span>Planetentyp</span><span id="travel-class">—</span></div>
+      </div>
+
+      <div class="sidebar-card">
+        <h3 class="card-title">Schiff konfigurieren</h3>
+
+        <label class="config-label">Schiffsklasse
+          <select id="ship-class" class="config-select">
+            <option value="scout">Scout  (max 50 Crew, 0.15c)</option>
+            <option value="cruiser" selected>Kreuzer  (max 200 Crew, 0.10c)</option>
+            <option value="colony">Kolonieschiff  (max 1000 Crew, 0.05c)</option>
+          </select>
+        </label>
+
+        <label class="config-label">Crew-Größe
+          <input id="crew-count" type="number" min="1" max="1000" value="50"
+                 class="config-input" />
+        </label>
+
+        <label class="config-label">
+          Geschwindigkeit: <span id="speed-label">5% c</span>
+          <input id="speed-frac" type="range" min="0.01" max="0.15" step="0.005" value="0.05"
+                 class="config-slider"
+                 oninput="document.getElementById('speed-label').textContent =
+                   (parseFloat(this.value)*100).toFixed(1)+'% c'" />
+        </label>
+
+        <div id="config-error" class="error-text" style="display:none"></div>
+      </div>
+
+      <button id="btn-examples" class="btn btn-secondary">Beispiel-Missionen anzeigen</button>
+      <div id="examples-panel" class="examples-panel" style="display:none"></div>
+    </div>
+
+    <!-- Results column -->
+    <div class="travel-results">
+      <div class="sidebar-card">
+        <h3 class="card-title">Missionsparameter</h3>
+        <div class="info-row large"><span>Reisezeit</span><strong id="travel-years">—</strong></div>
+        <div class="info-row"><span>Ankunft</span><span id="travel-arrival">—</span></div>
+        <div class="info-row"><span>Generationen</span><span id="travel-generations">—</span></div>
+        <div class="info-row"><span>Effektive Geschw.</span><span id="travel-speed">—</span></div>
+      </div>
+
+      <div class="sidebar-card">
+        <h3 class="card-title">Ressourcenbedarf</h3>
+        <div class="info-row"><span>⛽ Treibstoff</span><span id="res-fuel">—</span></div>
+        <div class="info-row"><span>🍱 Nahrung</span><span id="res-food">—</span></div>
+        <div class="info-row"><span>💊 Medizin</span><span id="res-medical">—</span></div>
+        <div class="info-row"><span>🔧 Ersatzteile</span><span id="res-parts">—</span></div>
+        <div class="info-row total-row"><span>Gesamtmasse</span><strong id="res-total">—</strong></div>
+      </div>
+
+      <div class="sidebar-card">
+        <h3 class="card-title">Missionsrisiko</h3>
+        <div class="risk-display">
+          <span id="travel-risk" class="risk-value">—</span>
+        </div>
+        <div class="risk-bar-bg">
+          <div id="risk-bar-fill" class="risk-bar-fill" style="width:0%"></div>
+        </div>
+      </div>
+
+      <button id="btn-launch" class="btn btn-danger" disabled>
+        🚀 Mission starten
+      </button>
+
+      <div id="launch-log" class="launch-log" style="display:none"></div>
+      <div id="outcome-panel" class="outcome-panel" style="display:none"></div>
+    </div>
+  </div>
+</section>
+
+<!-- ════════════════════════════════════════════════════════════
+     MISSION LOG PANEL
+════════════════════════════════════════════════════════════ -->
+<section id="log-panel" class="game-panel">
+  <div class="sidebar-card log-full">
+    <h3 class="card-title">Missionstagebuch</h3>
+    <ul id="mission-log-list" class="mission-log-list"></ul>
+  </div>
+</section>
+
+<!-- Global toast notification -->
+<div id="feedback-toast" class="toast" style="opacity:0"></div>
+
+<!-- ── Scripts (order matters: data → logic → ui → app) ── -->
+<script src="src/data/starCatalog.js"></script>
+<script src="src/data/gameState.js"></script>
+<script src="src/logic/lightCurve.js"></script>
+<script src="src/logic/planetAnalysis.js"></script>
+<script src="src/logic/travelPlanner.js"></script>
+<script src="src/ui/starMap.js"></script>
+<script src="src/ui/analysisPanel.js"></script>
+<script src="src/ui/travelPlanner.js"></script>
+<script src="src/ui/app.js"></script>
+
+</body>
+</html>
