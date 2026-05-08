@@ -294,7 +294,7 @@ const StarMapUI = (() => {
       chartCtx.fillText(f.toFixed(4), pad.left - 5, pad.top + (i / 5) * plotH + 4);
     }
     chartCtx.textAlign = "center";
-    for (let d = 0; d <= 30; d += 5) {
+    for (let d = 0; d <= 60; d += 10) {
       const x = px(d);
       chartCtx.fillText(d, x, H - 8);
     }
