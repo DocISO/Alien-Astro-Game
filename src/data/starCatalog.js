@@ -17,8 +17,8 @@ const STELLAR_CLASSES = {
   M: { tempRange: [2400,  3700],  luminosityRange: [0.0001,0.08],    colorHex: "#ffcc6f", weight: 0.745 },
 };
 
-// Probability that a star hosts a detectable exoplanet transit (realistic ~5–10%)
-const EXOPLANET_PROBABILITY = 0.07;
+// Probability that a star hosts a detectable exoplanet transit
+const EXOPLANET_PROBABILITY = 0.25;
 
 // Noise-only star probability (believable signal but no planet)
 const NOISE_ONLY_PROBABILITY = 0.35;
