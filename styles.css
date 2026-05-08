@@ -262,6 +262,17 @@ canvas { display: block; }
 
 .interpret-btn:hover { border-color: var(--accent); background: #1a1a44; color: var(--accent); }
 
+/* Transit found banner */
+.transit-found {
+  text-align: center;
+  padding: 6px 0;
+}
+.transit-icon  { font-size: 28px; margin-bottom: 4px; }
+.transit-title { font-size: 15px; font-weight: 700; color: var(--accent2); letter-spacing: 2px; }
+.transit-sub   { font-size: 12px; color: var(--accent); margin: 3px 0; }
+.transit-detail { font-size: 11px; color: var(--warn); margin: 6px 0 4px; font-family: var(--font-mono); }
+.transit-hint  { font-size: 11px; color: var(--text-dim); font-style: italic; }
+
 /* ── Toast ──────────────────────────────────────────────────── */
 .toast {
   position: fixed;
@@ -279,6 +290,7 @@ canvas { display: block; }
 
 .toast.success { background: #003322; border: 1px solid var(--success); color: var(--success); }
 .toast.error   { background: #220011; border: 1px solid var(--danger);  color: var(--danger);  }
+.toast.info    { background: #0d1a2e; border: 1px solid #4488ff;        color: #88aaff;        }
 
 /* ── Analysis Results Table ─────────────────────────────────── */
 .result-title { font-size: 14px; color: var(--accent2); margin-bottom: 8px; }

@@ -188,19 +188,33 @@ const StarMapUI = (() => {
     const btn = document.getElementById("btn-investigate");
     btn.disabled = true;
 
-    // Simulate 2–5 second scan
-    const delay = 2000 + Math.random() * 3000;
+    const delay = 1000 + Math.random() * 2000;
     startLoadingBar(delay, () => {
       activeCurve = generateLightCurve(selectedStar);
       selectedStar.investigated = true;
 
+      drawLightCurve(activeCurve);
+
       if (activeCurve.type === "transit") {
+        // Auto-confirm transit — player sees the obvious dip and proceeds
         selectedStar.exoplanetData = activeCurve.transitParams;
-        GameState.log(`Transit-Signal bei ${selectedStar.name} entdeckt!`);
+        GameState.discoverPlanet(selectedStar, activeCurve.transitParams);
+        GameState.set("analysisResult", {
+          star:          selectedStar,
+          transitParams: activeCurve.transitParams,
+        });
+        document.getElementById("btn-analyse-nav").disabled = false;
+        showTransitBanner(selectedStar.name, activeCurve.transitParams);
+        GameState.addToScore(300, `Transit entdeckt: ${selectedStar.name}`);
+      } else {
+        const msg = activeCurve.type === "noise"
+          ? "Nur Sternvariabilität — kein Planet."
+          : "Kein Signal — nächster Stern!";
+        showFeedbackToast(msg, "info");
+        GameState.addToScore(20, "Stern untersucht");
       }
 
-      drawLightCurve(activeCurve);
-      showInterpretationChoices(activeCurve.type);
+      updateScoreDisplay();
       btn.disabled = false;
     });
   }
@@ -312,44 +326,25 @@ const StarMapUI = (() => {
     chartCtx.fillText(`Lichtkurve: ${selectedStar.name}`, W / 2, 18);
   }
 
-  // ── Interpretation Mini-Game ─────────────────────────────────────────────────
+  // ── Transit Banner ────────────────────────────────────────────────────────────
 
-  function showInterpretationChoices(actualType) {
+  function showTransitBanner(starName, params) {
     const panel = document.getElementById("interpretation-panel");
     panel.style.display = "block";
-    panel.innerHTML     = `
-      <p class="interpret-title">Analysiere das Signal:</p>
-      <button class="interpret-btn" data-type="flat">Kein Signal</button>
-      <button class="interpret-btn" data-type="noise">Rauschen / Variabilität</button>
-      <button class="interpret-btn" data-type="transit">Exoplanet-Transit!</button>
+    panel.innerHTML = `
+      <div class="transit-found">
+        <div class="transit-icon">🪐</div>
+        <div class="transit-title">TRANSIT ENTDECKT!</div>
+        <div class="transit-sub">${starName}</div>
+        <div class="transit-detail">
+          Periode: ${params.period_days} Tage &nbsp;|&nbsp;
+          Tiefe: ${(params.depth * 100).toFixed(2)}% &nbsp;|&nbsp;
+          Radius: ~${params.Rp_earth} R⊕
+        </div>
+        <div class="transit-hint">→ Klicke "Planeten analysieren" um fortzufahren</div>
+      </div>
     `;
-    panel.querySelectorAll(".interpret-btn").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const choice  = btn.dataset.type;
-        const result  = evaluateInterpretation(choice, actualType);
-        handleInterpretationResult(result, actualType, choice);
-        panel.style.display = "none";
-      });
-    });
-  }
-
-  function handleInterpretationResult(result, actualType, playerChoice) {
-    if (result.correct) {
-      GameState.addToScore(result.bonus, result.feedback);
-      if (actualType === "transit") {
-        GameState.discoverPlanet(selectedStar, selectedStar.exoplanetData);
-        // Unlock Module 2
-        document.getElementById("btn-analyse-nav").disabled = false;
-        GameState.set("analysisResult", {
-          star:          selectedStar,
-          transitParams: selectedStar.exoplanetData,
-        });
-      }
-    } else {
-      GameState.addToScore(-result.penalty, result.feedback);
-    }
-    showFeedbackToast(result.feedback, result.correct ? "success" : "error");
-    updateScoreDisplay();
+    showFeedbackToast(`Transit bei ${starName}! +300 Punkte`, "success");
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -365,10 +360,10 @@ const StarMapUI = (() => {
 
   function showFeedbackToast(msg, type) {
     const toast = document.getElementById("feedback-toast");
-    toast.textContent  = msg;
-    toast.className    = "toast " + type;
+    toast.textContent   = msg;
+    toast.className     = "toast " + (type === "info" ? "info" : type);
     toast.style.opacity = 1;
-    setTimeout(() => toast.style.opacity = 0, 3000);
+    setTimeout(() => toast.style.opacity = 0, 3500);
   }
 
   function updateScoreDisplay() {
