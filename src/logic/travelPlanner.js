@@ -86,21 +86,38 @@ function calculateMission(cfg) {
   const def      = SHIP_CLASSES[shipClass];
   const v_eff    = crewToSpeed(def, crew);
   const shipMass = def.baseMass + crew * 2;
-  const travelYears = parseFloat((distance / v_eff).toFixed(1));
-  const generations = Math.max(1, Math.ceil(travelYears / 25));
 
+  // ── Relativistic time dilation ─────────────────────────────────────────────
+  // β = v/c,  γ = 1/√(1−β²)
+  // Earth time  : t_earth = d / v  (coordinate time, what clocks on Earth show)
+  // Crew time   : t_crew  = t_earth / γ = t_earth × √(1−β²)
+  //               (proper time — the crew ages by this amount)
+  // Faster ship → higher γ → crew experiences noticeably less time
+  const beta         = v_eff;                              // v as fraction of c
+  const lorentzGamma = 1 / Math.sqrt(1 - beta * beta);
+  const travelYears_earth = parseFloat((distance / v_eff).toFixed(1));
+  const travelYears_crew  = parseFloat((travelYears_earth / lorentzGamma).toFixed(1));
+  const timeSaved_years   = parseFloat((travelYears_earth - travelYears_crew).toFixed(1));
+
+  // Generations on board based on crew's experienced time
+  const generations = Math.max(1, Math.ceil(travelYears_crew / 25));
+
+  // Resources consumed at the crew's rate (not Earth time)
   const fuel       = Math.round(shipMass * Math.pow(v_eff, 2) * 140);
-  const food       = Math.round(crew * travelYears * 1.2);
-  const medical    = Math.round(crew * 0.4 + travelYears * 0.6);
-  const spareParts = Math.round(shipMass * 0.06 * travelYears);
+  const food       = Math.round(crew * travelYears_crew * 1.2);   // crew time!
+  const medical    = Math.round(crew * 0.4 + travelYears_crew * 0.6);
+  const spareParts = Math.round(shipMass * 0.06 * travelYears_crew);
   const totalMass  = shipMass + fuel + food + medical + spareParts;
 
   return {
     input: { shipClass, shipLabel: def.label, shipEmoji: def.emoji, crew, speedFrac: v_eff, distance_ly: distance },
-    travelYears,
+    travelYears_earth,
+    travelYears_crew,
+    timeSaved_years,
+    lorentzGamma: parseFloat(lorentzGamma.toFixed(4)),
     generations,
     resources: { fuel, food, medical, spareParts, totalMass },
-    arrivalYear: new Date().getFullYear() + Math.round(travelYears),
+    arrivalYear: new Date().getFullYear() + Math.round(travelYears_earth),
     colonyRequired: distance > COLONY_MIN_DIST,
   };
 }
@@ -120,9 +137,10 @@ function calculateMission(cfg) {
  * @param {string} starName
  * @returns {{ year: number, icon: string, text: string, type: string }[]}
  */
-function generateMissionLog(shipClass, crew, distance, travelYears, generations, starName) {
+function generateMissionLog(shipClass, crew, distance, travelYears_earth, travelYears_crew, generations, starName) {
   const entries = [];
-  const Y = travelYears;
+  const Y       = travelYears_crew;   // logbook time = what the crew experiences
+  const saved   = Math.round(travelYears_earth - travelYears_crew);
 
   // ── Helper ─────────────────────────────────────────────────────────────────
   function add(yearFraction, icon, text, type = "info") {
@@ -141,6 +159,22 @@ function generateMissionLog(shipClass, crew, distance, travelYears, generations,
     add(0, "🌍", `${crew} Menschen — Familien, Wissenschaftler, Ingenieure — starten ins Unbekannte.`, "milestone");
     add(0.02, "🏫", "Die Schule an Bord öffnet. Die Kinder lernen heute: Was ist ein Lichtjahr?", "info");
     add(0.03, "🌱", "Die Gewächshäuser werden angelegt. Tomaten, Salat und Kartoffeln wachsen unter LED-Licht.", "info");
+  }
+
+  // ── 1b. RELATIVISTISCHER EFFEKT ───────────────────────────────────────────
+  // Nur einblenden wenn der Unterschied merklich ist (≥ 1 Jahr gespart)
+  if (saved >= 1) {
+    const savedText = saved === 1 ? "1 Jahr" : `${saved} Jahre`;
+    add(0.05, "⏱️",
+      `Einstein hatte recht! Wegen unserer Geschwindigkeit läuft die Zeit an Bord etwas langsamer ` +
+      `als auf der Erde. Wir erleben diese Reise ${savedText} kürzer als die Menschen zu Hause — ` +
+      `und brauchen dafür auch weniger Proviant!`,
+      "milestone");
+  } else {
+    add(0.05, "⏱️",
+      "Interessant: Bei unserer Geschwindigkeit ticken die Uhren an Bord winzig langsamer als auf " +
+      "der Erde — Einstein nannte das Zeitdilatation. Der Unterschied ist noch klein, aber er ist real!",
+      "info");
   }
 
   // ── 2. FRÜH (was man beachten muss) ───────────────────────────────────────

@@ -136,12 +136,20 @@ const TravelPlannerUI = (() => {
   // ── Render Mission Summary ────────────────────────────────────────────────────
 
   function renderResult(r) {
-    const tColor = r.travelYears < 100 ? "var(--success)"
-                 : r.travelYears < 300 ? "var(--warn)"
+    const tColor = r.travelYears_earth < 100 ? "var(--success)"
+                 : r.travelYears_earth < 300 ? "var(--warn)"
                  : "var(--danger)";
+    const saved  = r.timeSaved_years;
 
-    document.getElementById("travel-years").textContent    = r.travelYears.toLocaleString() + " Jahre";
-    document.getElementById("travel-years").style.color   = tColor;
+    document.getElementById("travel-years-earth").textContent = r.travelYears_earth.toLocaleString() + " Jahre";
+    document.getElementById("travel-years-earth").style.color = tColor;
+    document.getElementById("travel-years-crew").textContent  = r.travelYears_crew.toLocaleString() + " Jahre";
+    document.getElementById("travel-years-crew").style.color  = "var(--accent2)";
+    document.getElementById("travel-lorentz").textContent     = "γ = " + r.lorentzGamma.toFixed(4);
+    document.getElementById("travel-saved").textContent       =
+      saved > 0 ? `−${saved} J Proviant gespart` : "kein messbarer Unterschied";
+    document.getElementById("travel-saved").style.color =
+      saved >= 5 ? "var(--success)" : saved >= 1 ? "var(--accent2)" : "var(--text-dim)";
     document.getElementById("travel-arrival").textContent  = "Ankunft ca. " + r.arrivalYear;
     document.getElementById("travel-generations").textContent =
       r.generations > 1 ? `${r.generations} Generationen` : "Eine Generation";
@@ -172,7 +180,7 @@ const TravelPlannerUI = (() => {
 
     const entries = generateMissionLog(
       shipClass, crew, distance,
-      mission.travelYears, mission.generations,
+      mission.travelYears_earth, mission.travelYears_crew, mission.generations,
       targetPlanet?.starName || "Zielplanet"
     );
 
