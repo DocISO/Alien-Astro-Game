@@ -205,23 +205,19 @@
         <div class="info-row total-row"><span>Gesamtmasse</span><strong id="res-total">—</strong></div>
       </div>
 
-      <div class="sidebar-card">
-        <h3 class="card-title">Missionsrisiko</h3>
-        <div class="risk-display">
-          <span id="travel-risk" class="risk-value">—</span>
-        </div>
-        <div class="risk-bar-bg">
-          <div id="risk-bar-fill" class="risk-bar-fill" style="width:0%"></div>
-        </div>
-      </div>
-
-      <button id="btn-launch" class="btn btn-danger" disabled>
-        🚀 Mission starten
+      <button id="btn-launch" class="btn btn-success" disabled>
+        🚀 Mission starten!
       </button>
-
-      <div id="launch-log" class="launch-log" style="display:none"></div>
-      <div id="outcome-panel" class="outcome-panel" style="display:none"></div>
     </div>
+
+    <!-- Logbook column — appears after launch -->
+    <div id="logbook-panel" class="logbook-panel" style="display:none">
+      <div class="sidebar-card logbook-card">
+        <h3 class="card-title">📖 Reisetagebuch</h3>
+        <div id="logbook-entries" class="logbook-entries"></div>
+      </div>
+    </div>
+
   </div>
 </section>
 

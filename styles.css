@@ -431,22 +431,74 @@ canvas { display: block; }
 
 .error-text { color: var(--danger); font-size: 12px; margin-top: 4px; }
 
-/* ── Risk Bar ────────────────────────────────────────────────── */
-.risk-display { text-align: center; margin-bottom: 8px; }
-.risk-value   { font-size: 36px; font-family: var(--font-mono); font-weight: 700; }
-
-.risk-bar-bg {
-  height: 8px;
-  background: #1a1a35;
-  border-radius: 4px;
-  overflow: hidden;
+/* ── Logbook ─────────────────────────────────────────────────── */
+.logbook-panel {
+  flex: 1.2;
+  min-width: 0;
 }
 
-.risk-bar-fill {
-  height: 100%;
-  border-radius: 4px;
-  transition: width 0.3s, background 0.3s;
+.logbook-card { padding: 12px; }
+
+.logbook-entries {
+  max-height: 520px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 4px;
 }
+
+.log-entry {
+  display: grid;
+  grid-template-columns: 72px 28px 1fr;
+  align-items: start;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.4;
+  animation: fadeSlide 0.35s ease;
+}
+
+@keyframes fadeSlide {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.log-year {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  color: var(--text-dim);
+  padding-top: 2px;
+  white-space: nowrap;
+}
+
+.log-icon { font-size: 16px; text-align: center; }
+.log-text { color: var(--text-main); }
+
+/* Entry type colours */
+.log-info     { background: #0d0d22; border-left: 3px solid #2a2a55; }
+.log-problem  { background: #1a0d00; border-left: 3px solid var(--warn); }
+.log-solution { background: #001a0d; border-left: 3px solid var(--success); }
+.log-milestone{ background: #0d0d2a; border-left: 3px solid var(--accent); }
+.log-arrival  {
+  background: linear-gradient(135deg, #001a22, #002211);
+  border-left: 3px solid var(--accent2);
+  border-radius: 8px;
+  padding: 12px;
+}
+.log-arrival .log-text { color: var(--accent2); font-weight: 700; font-size: 14px; }
+
+.log-finish {
+  text-align: center;
+  padding: 16px;
+  margin-top: 8px;
+  background: linear-gradient(135deg, #001a10, #0d1a00);
+  border-radius: 8px;
+  border: 1px solid var(--success);
+}
+.log-finish-title { color: var(--success); font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.log-finish-bonus { color: var(--warn); font-size: 20px; font-weight: 700; font-family: var(--font-mono); }
 
 /* ── Examples Panel ─────────────────────────────────────────── */
 .examples-panel { background: #0d0d22; border: 1px solid var(--border); border-radius: 4px; padding: 12px; }
