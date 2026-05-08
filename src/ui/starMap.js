@@ -181,6 +181,9 @@ const StarMapUI = (() => {
     document.getElementById("btn-investigate").disabled  = false;
     document.getElementById("chart-placeholder").style.display = "flex";
     chartCtx.clearRect(0, 0, chartCanvas.width, chartCanvas.height);
+
+    // Bug 1 fix: hide transit banner whenever a new star is selected
+    document.getElementById("interpretation-panel").style.display = "none";
   }
 
   function onInvestigateClick() {

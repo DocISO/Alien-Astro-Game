@@ -31,6 +31,10 @@ const AnalysisPanelUI = (() => {
     if (!data) return;
 
     document.getElementById("btn-run-analysis").disabled = true;
+    // Clear previous results so the old planet is never shown while loading
+    document.getElementById("analysis-results").style.display = "none";
+    document.getElementById("btn-travel").disabled = true;
+
     const delay = 2500 + Math.random() * 2000;
 
     startAnalysisBar(delay, () => {
@@ -50,6 +54,8 @@ const AnalysisPanelUI = (() => {
       }
 
       GameState.set("currentPlanet", currentResult);
+      // Bug 2 fix: re-enable button so the next found planet can be analysed
+      document.getElementById("btn-run-analysis").disabled = false;
       document.getElementById("btn-travel").disabled = false;
       startOrbitalSimulation(result, data.star);
     });
