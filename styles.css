@@ -350,6 +350,85 @@ canvas { display: block; }
   accent-color: var(--accent);
 }
 
+/* Colony required banner */
+.colony-required-banner {
+  background: #2a0a00;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+  border-radius: 6px;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+/* Ship cards */
+.ship-cards-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ship-card {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  position: relative;
+  background: #0d0d22;
+}
+
+.ship-card:hover:not(.ship-locked) { border-color: var(--accent); background: #111133; }
+.ship-card.ship-selected           { border-color: var(--accent2); background: #0d1f1a; }
+.ship-card.ship-recommended        { border-color: var(--warn); }
+.ship-card.ship-locked             { opacity: 0.35; cursor: not-allowed; }
+
+.ship-card-emoji { font-size: 20px; display: inline-block; margin-right: 8px; vertical-align: middle; }
+.ship-card-label { font-size: 14px; font-weight: 700; color: var(--text-main); display: inline-block; vertical-align: middle; }
+.ship-card-speed { font-size: 11px; color: var(--accent); font-family: var(--font-mono); margin-top: 3px; }
+.ship-card-crew  { font-size: 11px; color: var(--text-dim); }
+.ship-card-desc  { font-size: 11px; color: var(--text-dim); margin-top: 3px; }
+
+.ship-rec-badge  { position: absolute; top: 6px; right: 8px; font-size: 10px; color: var(--warn);    font-weight: 700; }
+.ship-locked-badge { position: absolute; top: 6px; right: 8px; font-size: 10px; color: var(--danger); font-weight: 700; }
+
+/* Crew slider row */
+.crew-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 8px 0 4px;
+}
+
+.crew-row .config-slider { flex: 1; margin-top: 0; }
+
+.balance-label { font-size: 11px; color: var(--text-dim); white-space: nowrap; min-width: 36px; }
+
+/* Balance bar */
+.balance-bar-bg {
+  height: 6px;
+  background: #1a1a35;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.balance-bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.2s, background 0.2s;
+}
+
+.crew-stats {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-top: 4px;
+}
+
+.bonus-text { color: var(--success); font-weight: 700; margin-top: 6px; }
+
 .error-text { color: var(--danger); font-size: 12px; margin-top: 4px; }
 
 /* ── Risk Bar ────────────────────────────────────────────────── */

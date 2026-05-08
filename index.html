@@ -138,36 +138,46 @@
 
     <!-- Config column -->
     <div class="travel-config">
+
       <div class="sidebar-card">
         <h3 class="card-title">Reiseziel</h3>
         <div class="info-row"><span>Stern</span><span id="travel-target-name">—</span></div>
-        <div class="info-row"><span>Entfernung</span><span id="travel-distance">—</span></div>
+        <div class="info-row"><span>Entfernung</span><strong id="travel-distance" style="color:var(--accent)">—</strong></div>
         <div class="info-row"><span>Planetentyp</span><span id="travel-class">—</span></div>
       </div>
 
+      <!-- Colony required warning -->
+      <div id="colony-required-banner" class="colony-required-banner" style="display:none">
+        ⚠ Entfernung &gt; 65 Lj — nur Kolonieschiff verfügbar
+      </div>
+
+      <!-- Ship cards -->
       <div class="sidebar-card">
-        <h3 class="card-title">Schiff konfigurieren</h3>
+        <h3 class="card-title">Schiffsklasse wählen</h3>
+        <div id="ship-cards" class="ship-cards-grid"></div>
+      </div>
 
-        <label class="config-label">Schiffsklasse
-          <select id="ship-class" class="config-select">
-            <option value="scout">Scout  (max 50 Crew, 0.15c)</option>
-            <option value="cruiser" selected>Kreuzer  (max 200 Crew, 0.10c)</option>
-            <option value="colony">Kolonieschiff  (max 1000 Crew, 0.05c)</option>
-          </select>
-        </label>
+      <!-- Crew slider -->
+      <div class="sidebar-card">
+        <h3 class="card-title">Crew-Größe &amp; Geschwindigkeit</h3>
+        <p class="hint-text">Mehr Crew → langsamer · Weniger Crew → schneller</p>
 
-        <label class="config-label">Crew-Größe
-          <input id="crew-count" type="number" min="1" max="1000" value="50"
-                 class="config-input" />
-        </label>
-
-        <label class="config-label">
-          Geschwindigkeit: <span id="speed-label">5% c</span>
-          <input id="speed-frac" type="range" min="0.01" max="0.15" step="0.005" value="0.05"
+        <div class="crew-row">
+          <span class="balance-label" id="balance-label-speed">Schnell</span>
+          <input id="crew-slider" type="range" min="2" max="25" value="5"
                  class="config-slider"
-                 oninput="document.getElementById('speed-label').textContent =
-                   (parseFloat(this.value)*100).toFixed(1)+'% c'" />
-        </label>
+                 oninput="TravelPlannerUI.onCrewChange(this.value)" />
+          <span class="balance-label" id="balance-label-crew">Groß</span>
+        </div>
+
+        <!-- Balance bar -->
+        <div class="balance-bar-bg">
+          <div id="balance-bar-fill" class="balance-bar-fill" style="width:20%"></div>
+        </div>
+        <div class="crew-stats">
+          <span>Crew: <strong id="crew-value">—</strong></span>
+          <span>Geschwindigkeit: <strong id="speed-derived" style="color:var(--accent)">—</strong></span>
+        </div>
 
         <div id="config-error" class="error-text" style="display:none"></div>
       </div>
