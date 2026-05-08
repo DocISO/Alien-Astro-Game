@@ -230,6 +230,8 @@ const StarMapUI = (() => {
   // ── Light Curve Chart ────────────────────────────────────────────────────────
 
   function drawLightCurve(curve) {
+    // Hide the placeholder text once a real curve is drawn
+    document.getElementById("chart-placeholder").style.display = "none";
     const W = chartCanvas.width, H = chartCanvas.height;
     chartCtx.clearRect(0, 0, W, H);
 
