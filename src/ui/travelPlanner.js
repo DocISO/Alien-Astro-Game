@@ -302,9 +302,14 @@ const TravelPlannerUI = (() => {
   }
 
   function finishMission(mission) {
+    const tEarth = mission.travelYears_earth;
     const footer = document.createElement("div");
     footer.className = "log-finish";
-    footer.innerHTML = `<div class="log-finish-title">Mission abgeschlossen!</div>`;
+    footer.innerHTML = `
+      <div class="log-finish-title">🌍 Zielplanet erreicht.</div>
+      <div class="log-finish-sub">Erkundung beginnt. Informationsnachricht wird zur Erde geschickt.</div>
+      <div class="log-finish-delay">📡 Laufzeit der Nachricht: ${tEarth.toLocaleString()} Jahre</div>
+    `;
     document.getElementById("logbook-entries").appendChild(footer);
     footer.scrollIntoView({ behavior: "smooth" });
     document.getElementById("btn-launch").disabled = false;

@@ -492,7 +492,9 @@ canvas { display: block; }
   border-radius: 8px;
   border: 1px solid var(--success);
 }
-.log-finish-title { color: var(--success); font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.log-finish-title  { color: var(--success); font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+.log-finish-sub    { color: var(--text-dim); font-size: 13px; margin-bottom: 4px; }
+.log-finish-delay  { color: var(--accent); font-size: 12px; font-family: var(--font-mono); }
 
 /* ── Examples Panel ─────────────────────────────────────────── */
 .examples-panel { background: #0d0d22; border: 1px solid var(--border); border-radius: 4px; padding: 12px; }
@@ -684,11 +686,12 @@ canvas { display: block; }
 }
 
 /* ── Swing-by Quest ──────────────────────────────────────────── */
-.swingby-canvas { display: block; border: 1px solid var(--border); border-radius: 4px; max-width: 100%; }
-.swingby-ctrl   { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
-.swingby-lbl    { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
-.swingby-ctrl .config-slider { flex: 1; }
-.swingby-status { font-size: 13px; min-height: 20px; margin-bottom: 6px; font-family: var(--font-mono); }
+.swingby-canvas   { display: block; border: 1px solid var(--border); border-radius: 4px; max-width: 100%; user-select: none; }
+.swingby-attempts { font-size: 12px; color: var(--accent); font-family: var(--font-mono); margin-bottom: 4px; }
+.swingby-feedback { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
+.swingby-fb-row   { font-size: 12px; padding: 5px 10px; border-radius: 4px; font-family: var(--font-mono); }
+.fb-ok  { background: rgba(0,255,136,0.1); color: #80ffbb; }
+.fb-err { background: rgba(255,80,80,0.1); color: #ffaaaa; }
 
 /* ── Data Storage Quest ──────────────────────────────────────── */
 .alloc-grid      { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }

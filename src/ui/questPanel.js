@@ -426,66 +426,79 @@ const QuestPanel = (() => {
   // ── Quest 5: Swing-by Manöver ─────────────────────────────────────────────────
 
   function renderSwingby(wrapper, entry, done) {
-    const W = 400, H = 300;
+    const W = 430, H = 310;
     const CX = W / 2, CY = H / 2;
-    const STAR_R    = 18;
-    const ORBIT_R   = 95;
-    const SAFE_MIN  = STAR_R + 14;  // min approach: 32 px
-    const SAFE_MAX  = 85;           // max approach: 85 px
-    const planetAng = 2.2;          // fixed planet position
+    const STAR_R   = 18;
+    const ORBIT_R  = 95;
+    const SAFE_MIN = STAR_R + 14;  // 32 px — closer = crash
+    const SAFE_MAX = 82;           // too far = no gravity assist
+    const planetAng = 2.2;
+    const MAX_ATTEMPTS = 2;
 
-    const hint = document.createElement("p");
-    hint.className = "quest-task";
-    hint.textContent = "Ziehe den Schieberegler, um den Einflugskorridor zu wählen. Starte dann!";
-    wrapper.appendChild(hint);
+    let attempts  = 0;
+    let isDrawing = false;
+    let drawnPath = [];
+    let done2     = false;
 
+    // Deterministic background stars
+    const bgStars = Array.from({ length: 65 }, (_, i) => ({
+      x: (i * 97 + 13) % W,
+      y: (i * 71 + 7)  % H,
+    }));
+
+    // ── Instruction ───────────────────────────────────────────────────────────
+    const taskEl = document.createElement("p");
+    taskEl.className = "quest-task";
+    taskEl.innerHTML =
+      "Zeichne mit der Maus einen Flugweg <strong>vom Bildrand herein, kurz am Stern vorbei, dann zum Planeten</strong>. " +
+      "Zu nah = Absturz · Zu weit = kein Bremseffekt";
+    wrapper.appendChild(taskEl);
+
+    const attEl = document.createElement("div");
+    attEl.className = "swingby-attempts";
+    attEl.textContent = `Versuch 1 / ${MAX_ATTEMPTS}`;
+    wrapper.appendChild(attEl);
+
+    // ── Canvas ────────────────────────────────────────────────────────────────
     const cvs = document.createElement("canvas");
     cvs.width  = W;
     cvs.height = H;
-    cvs.id = "swingby-cvs";
     cvs.className = "swingby-canvas";
+    cvs.style.cursor = "crosshair";
     wrapper.appendChild(cvs);
+    const ctx = cvs.getContext("2d");
 
-    const ctrl = document.createElement("div");
-    ctrl.className = "swingby-ctrl";
-    ctrl.innerHTML = `
-      <span class="swingby-lbl">Nah ☠️</span>
-      <input type="range" id="swingby-sl" class="config-slider" min="0" max="100" value="50">
-      <span class="swingby-lbl">Weit ❄️</span>
-    `;
-    wrapper.appendChild(ctrl);
+    // ── Feedback ──────────────────────────────────────────────────────────────
+    const feedEl = document.createElement("div");
+    feedEl.className = "swingby-feedback";
+    wrapper.appendChild(feedEl);
 
-    const statusEl = document.createElement("div");
-    statusEl.id = "swingby-st";
-    statusEl.className = "swingby-status";
-    wrapper.appendChild(statusEl);
-
-    const launchBtn = makeBtn("🚀 Einfliegen!", "quest-btn quest-btn-launch");
-    wrapper.appendChild(launchBtn);
-
-    function approachDist(sliderVal) {
-      return SAFE_MIN - 4 + sliderVal * 0.78;  // ~28–102 px
-    }
-
-    // Background star positions (deterministic)
-    const bgStars = Array.from({ length: 60 }, (_, i) => ({
-      x: (i * 97 + 13) % W,
-      y: (i * 71 + 7) % H,
-    }));
-
-    function drawScene(sliderVal, path) {
-      const ctx = cvs.getContext("2d");
+    // ── Draw helpers ──────────────────────────────────────────────────────────
+    function drawBase() {
       ctx.clearRect(0, 0, W, H);
       ctx.fillStyle = "#030312";
       ctx.fillRect(0, 0, W, H);
 
-      // Background stars
-      ctx.fillStyle = "rgba(200,215,255,0.35)";
+      // BG stars
       bgStars.forEach(s => {
         ctx.beginPath();
         ctx.arc(s.x, s.y, 0.9, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(200,215,255,0.3)";
         ctx.fill();
       });
+
+      // Zone rings (subtle guides)
+      ctx.setLineDash([3, 6]);
+      ctx.beginPath();
+      ctx.arc(CX, CY, SAFE_MIN, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(255,80,80,0.35)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(CX, CY, SAFE_MAX, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(80,255,150,0.35)";
+      ctx.stroke();
+      ctx.setLineDash([]);
 
       // Planet orbit
       ctx.beginPath();
@@ -494,13 +507,13 @@ const QuestPanel = (() => {
       ctx.lineWidth = 1;
       ctx.stroke();
 
-      // Star
-      const sg = ctx.createRadialGradient(CX, CY, 0, CX, CY, STAR_R * 1.8);
+      // Star glow + core
+      const sg = ctx.createRadialGradient(CX, CY, 0, CX, CY, STAR_R * 2);
       sg.addColorStop(0, "#fff8d0");
-      sg.addColorStop(0.4, "#ffcc44");
+      sg.addColorStop(0.35, "#ffcc44");
       sg.addColorStop(1, "transparent");
       ctx.beginPath();
-      ctx.arc(CX, CY, STAR_R * 1.8, 0, Math.PI * 2);
+      ctx.arc(CX, CY, STAR_R * 2, 0, Math.PI * 2);
       ctx.fillStyle = sg;
       ctx.fill();
       ctx.beginPath();
@@ -516,131 +529,226 @@ const QuestPanel = (() => {
       ctx.fillStyle = "#4488ff";
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(px, py, 9, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(150,200,255,0.5)";
-      ctx.lineWidth = 3;
-      ctx.stroke();
-
-      // Approach corridor indicator
-      const ad = approachDist(sliderVal);
-      const safeColor = ad < SAFE_MIN ? "rgba(255,60,60,0.55)"
-                      : ad > SAFE_MAX ? "rgba(255,180,0,0.55)"
-                      : "rgba(80,255,150,0.55)";
-      ctx.beginPath();
-      ctx.arc(CX, CY, ad, 0, Math.PI * 2);
-      ctx.strokeStyle = safeColor;
+      ctx.arc(px, py, 13, 0, Math.PI * 2);
+      ctx.strokeStyle = "rgba(150,200,255,0.4)";
       ctx.lineWidth = 2;
-      ctx.setLineDash([5, 4]);
       ctx.stroke();
-      ctx.setLineDash([]);
 
-      // Ship origin
-      ctx.beginPath();
-      ctx.arc(22, 22, 5, 0, Math.PI * 2);
-      ctx.fillStyle = "#ffffff";
-      ctx.fill();
-      ctx.fillStyle = "#aaaacc";
+      // Legend
       ctx.font = "10px monospace";
-      ctx.fillText("Schiff", 30, 26);
+      ctx.fillStyle = "rgba(255,80,80,0.6)";  ctx.fillText("── Zu nah", 6, H - 30);
+      ctx.fillStyle = "rgba(0,255,136,0.7)";  ctx.fillText("── Ideal",  6, H - 18);
+      ctx.fillStyle = "rgba(0,180,255,0.6)";  ctx.fillText("── Zu weit",6, H - 6);
+    }
 
-      // Animated path
-      if (path && path.length > 1) {
+    function drawUserPath(path, closestIdx) {
+      if (path.length < 2) return;
+      // Color each segment by distance to star
+      for (let i = 1; i < path.length; i++) {
+        const d = Math.hypot(path[i].x - CX, path[i].y - CY);
         ctx.beginPath();
-        ctx.moveTo(path[0].x, path[0].y);
-        for (let i = 1; i < path.length; i++) ctx.lineTo(path[i].x, path[i].y);
-        ctx.strokeStyle = "#00ccff";
+        ctx.moveTo(path[i-1].x, path[i-1].y);
+        ctx.lineTo(path[i].x, path[i].y);
+        ctx.strokeStyle = d < SAFE_MIN ? "#ff4444"
+                        : d <= SAFE_MAX ? "#00ff88"
+                        : "#00aaff";
+        ctx.lineWidth = 2.5;
+        ctx.stroke();
+      }
+      // Closest-point marker + distance line
+      if (closestIdx >= 0) {
+        const cp = path[closestIdx];
+        ctx.beginPath();
+        ctx.arc(cp.x, cp.y, 7, 0, Math.PI * 2);
+        ctx.strokeStyle = "#ffcc00";
         ctx.lineWidth = 2;
         ctx.stroke();
-        const last = path[path.length - 1];
         ctx.beginPath();
-        ctx.arc(last.x, last.y, 5, 0, Math.PI * 2);
-        ctx.fillStyle = "#00ccff";
-        ctx.fill();
+        ctx.moveTo(cp.x, cp.y);
+        ctx.lineTo(CX, CY);
+        ctx.strokeStyle = "rgba(255,200,0,0.35)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([3, 4]);
+        ctx.stroke();
+        ctx.setLineDash([]);
       }
     }
 
-    function computePath(sliderVal) {
-      const ad = approachDist(sliderVal);
+    function drawCorrectPath(pts) {
+      if (pts.length < 2) return;
+      ctx.beginPath();
+      ctx.moveTo(pts[0].x, pts[0].y);
+      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+      ctx.strokeStyle = "#ffcc00";
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([7, 4]);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Ship marker at end
+      const last = pts[pts.length - 1];
+      ctx.beginPath();
+      ctx.arc(last.x, last.y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffcc00";
+      ctx.fill();
+    }
+
+    drawBase();
+
+    // ── Mouse events ──────────────────────────────────────────────────────────
+    function getPos(e) {
+      const r = cvs.getBoundingClientRect();
+      return {
+        x: (e.clientX - r.left) * (W / r.width),
+        y: (e.clientY - r.top)  * (H / r.height),
+      };
+    }
+
+    cvs.addEventListener("mousedown", e => {
+      if (done2) return;
+      isDrawing = true;
+      drawnPath = [getPos(e)];
+    });
+
+    cvs.addEventListener("mousemove", e => {
+      if (!isDrawing) return;
+      drawnPath.push(getPos(e));
+      drawBase();
+      drawUserPath(drawnPath, -1);
+    });
+
+    function finishDraw() {
+      if (!isDrawing) return;
+      isDrawing = false;
+      if (drawnPath.length < 15) { drawnPath = []; return; }
+      analyze();
+    }
+    cvs.addEventListener("mouseup",    finishDraw);
+    cvs.addEventListener("mouseleave", finishDraw);
+
+    // ── Analysis ──────────────────────────────────────────────────────────────
+    function analyze() {
+      attempts++;
+      attEl.textContent = `Versuch ${attempts} / ${MAX_ATTEMPTS}`;
+
+      // Find closest point to star
+      let minDist = Infinity, minIdx = 0;
+      drawnPath.forEach((p, i) => {
+        const d = Math.hypot(p.x - CX, p.y - CY);
+        if (d < minDist) { minDist = d; minIdx = i; }
+      });
+
+      // Start at edge?
+      const s0 = drawnPath[0];
+      const edgeDist = Math.min(s0.x, W - s0.x, s0.y, H - s0.y);
+      const startsEdge = edgeDist < 90;
+
+      const tooClose = minDist < SAFE_MIN;
+      const tooFar   = minDist > SAFE_MAX;
+      const correct  = startsEdge && !tooClose && !tooFar;
+
+      // Redraw with analysis
+      drawBase();
+      drawUserPath(drawnPath, minIdx);
+
+      // Feedback rows
+      feedEl.innerHTML = "";
+      const distFromSurface = Math.round(minDist - STAR_R);
+
+      [
+        {
+          ok: startsEdge,
+          text: startsEdge
+            ? "Flugbahn startet außerhalb des Systems ✓"
+            : "⚠ Starte deinen Flugweg am Rand des Bildes!",
+        },
+        {
+          ok: !tooClose && !tooFar,
+          text: tooClose
+            ? `⚠ Zu nah! Nächster Punkt lag ${distFromSurface} px vom Sternrand — Absturzgefahr. Mindestabstand: ${Math.round(SAFE_MIN - STAR_R)} px`
+            : tooFar
+            ? `⚠ Zu weit! Nächster Punkt: ${distFromSurface} px — Schwerkraft zu schwach. Maximalabstand: ${Math.round(SAFE_MAX - STAR_R)} px`
+            : `Idealer Abstand: ${distFromSurface} px vom Sternrand — Schwerkraft nutzbar ✓`,
+        },
+      ].forEach(r => {
+        const row = document.createElement("div");
+        row.className = "swingby-fb-row " + (r.ok ? "fb-ok" : "fb-err");
+        row.textContent = r.text;
+        feedEl.appendChild(row);
+      });
+
+      if (correct || attempts >= MAX_ATTEMPTS) {
+        done2 = true;
+        cvs.style.cursor = "default";
+        // Explanation text
+        const expEl = document.createElement("div");
+        expEl.className = `quest-explanation ${correct ? "quest-exp-correct" : "quest-exp-wrong"}`;
+        expEl.innerHTML = correct
+          ? "✅ Perfekt! Die Schwerkraft des Sterns hat das Schiff abgebremst und auf Kurs gebracht — ohne Treibstoff. Genauso nutzte die Sonde Voyager&nbsp;2 die Planeten des Sonnensystems!"
+          : "❌ Nicht ganz — hier ist der korrekte Swing-by:";
+        wrapper.appendChild(expEl);
+
+        // Animate correct path
+        const correctPts = computeCorrectPath();
+        let step = 0;
+        const anim = setInterval(() => {
+          step = Math.min(step + 3, correctPts.length);
+          drawBase();
+          if (!correct) drawUserPath(drawnPath, minIdx);  // keep user path visible
+          drawCorrectPath(correctPts.slice(0, step));
+          if (step >= correctPts.length) {
+            clearInterval(anim);
+            continueBtn(wrapper, done, correct);
+          }
+        }, 20);
+
+      } else {
+        // Retry button
+        const retryBtn = makeBtn("🔄 Nochmal zeichnen (Versuch 2)", "quest-btn");
+        retryBtn.onclick = () => {
+          drawnPath = [];
+          feedEl.innerHTML = "";
+          retryBtn.remove();
+          drawBase();
+          cvs.style.cursor = "crosshair";
+        };
+        feedEl.appendChild(retryBtn);
+      }
+    }
+
+    // ── Ideal trajectory ──────────────────────────────────────────────────────
+    function computeCorrectPath() {
+      const AD = 55;  // ideal approach distance (middle of safe zone)
       const pts = [];
-      // Entry from top-left toward a point offset from star center
-      const entX = 22, entY = 22;
-      const toStarDX = CX - entX, toStarDY = CY - entY;
-      const len = Math.hypot(toStarDX, toStarDY);
-      const ux = toStarDX / len, uy = toStarDY / len;
+      const entX = 28, entY = 28;
+      const dx = CX - entX, dy = CY - entY;
+      const len = Math.hypot(dx, dy);
+      const ux = dx / len, uy = dy / len;
       const perpX = -uy, perpY = ux;
-      const aimX = CX + perpX * ad;
-      const aimY = CY + perpY * ad;
+      const aimX = CX + perpX * AD, aimY = CY + perpY * AD;
 
       // Straight approach
-      for (let i = 0; i <= 40; i++) {
-        pts.push({ x: entX + (aimX - entX) * i / 40, y: entY + (aimY - entY) * i / 40 });
+      for (let i = 0; i <= 45; i++)
+        pts.push({ x: entX + (aimX - entX) * i / 45, y: entY + (aimY - entY) * i / 45 });
+
+      // Hyperbolic arc
+      const periAng = Math.atan2(aimY - CY, aimX - CX);
+      const sweep   = Math.PI * 1.4;
+      for (let i = 1; i <= 60; i++) {
+        const ang = periAng + sweep * i / 60;
+        pts.push({ x: CX + Math.cos(ang) * AD, y: CY + Math.sin(ang) * AD });
       }
 
-      if (ad < SAFE_MIN) {
-        // Crash: straight into star
-        for (let i = 1; i <= 20; i++)
-          pts.push({ x: aimX + (CX - aimX) * i / 20, y: aimY + (CY - aimY) * i / 20 });
-        return pts;
-      }
+      // Exit toward planet
+      const exitAng = periAng + sweep;
+      const exX = CX + Math.cos(exitAng) * AD;
+      const exY = CY + Math.sin(exitAng) * AD;
+      const plX = CX + Math.cos(planetAng) * ORBIT_R;
+      const plY = CY + Math.sin(planetAng) * ORBIT_R;
+      for (let i = 1; i <= 42; i++)
+        pts.push({ x: exX + (plX - exX) * i / 42, y: exY + (plY - exY) * i / 42 });
 
-      // Hyperbolic curve around star
-      const periAng   = Math.atan2(aimY - CY, aimX - CX);
-      const sweepAng  = ad < 60 ? Math.PI * 1.5 : Math.PI * 0.9;
-      for (let i = 1; i <= 55; i++) {
-        const ang = periAng + sweepAng * i / 55;
-        pts.push({ x: CX + Math.cos(ang) * ad, y: CY + Math.sin(ang) * ad });
-      }
-
-      if (ad <= SAFE_MAX) {
-        // Exit toward planet
-        const exitAng = periAng + sweepAng;
-        const exX = CX + Math.cos(exitAng) * ad;
-        const exY = CY + Math.sin(exitAng) * ad;
-        const plX = CX + Math.cos(planetAng) * ORBIT_R;
-        const plY = CY + Math.sin(planetAng) * ORBIT_R;
-        for (let i = 1; i <= 40; i++)
-          pts.push({ x: exX + (plX - exX) * i / 40, y: exY + (plY - exY) * i / 40 });
-      }
       return pts;
     }
-
-    let sliderVal = 50;
-    drawScene(sliderVal, null);
-    statusEl.textContent = "Wähle deinen Einflugskorridor.";
-
-    document.getElementById("swingby-sl").oninput = (e) => {
-      sliderVal = parseInt(e.target.value);
-      drawScene(sliderVal, null);
-      const ad = approachDist(sliderVal);
-      statusEl.textContent = ad < SAFE_MIN ? "⚠️ Zu nah — Absturzgefahr!"
-                           : ad > SAFE_MAX ? "⚠️ Zu weit — kaum Bremseffekt."
-                           : "✅ Guter Korridor — Swing-by möglich!";
-    };
-
-    launchBtn.onclick = () => {
-      launchBtn.disabled = true;
-      document.getElementById("swingby-sl").disabled = true;
-      const ad      = approachDist(sliderVal);
-      const correct = ad >= SAFE_MIN && ad <= SAFE_MAX;
-      const path    = computePath(sliderVal);
-      let   step    = 0;
-
-      const anim = setInterval(() => {
-        step = Math.min(step + 4, path.length);
-        drawScene(sliderVal, path.slice(0, step));
-        if (step >= path.length) {
-          clearInterval(anim);
-          showExplanation(wrapper, correct,
-            correct
-              ? "✅ Perfekter Swing-by! Die Schwerkraft des Sterns hat euch abgebremst und auf Kurs gebracht — ohne zusätzlichen Treibstoff. Genau so nutzte die Sonde Voyager die Planeten unseres Sonnensystems!"
-              : ad < SAFE_MIN
-              ? "💥 Zu nah! Das Schiff ist in den Stern geflogen. Der Swing-by erfordert einen sicheren Mindestabstand — der Stern darf das Schiff nicht einfangen."
-              : "❌ Zu weit! Die Schwerkraft war zu schwach zum Abbremsen. Wir schießen am System vorbei und müssen Notbremstriebwerke zünden — das kostet Treibstoff."
-          );
-          continueBtn(wrapper, done, correct);
-        }
-      }, 25);
-    };
   }
 
   // ── Quest 6: Data Storage Allocation ─────────────────────────────────────────
