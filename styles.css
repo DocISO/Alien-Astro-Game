@@ -666,14 +666,27 @@ canvas { display: block; }
 .pulsar-status { font-size: 12px; color: var(--text-dim); margin: 6px 0; font-family: var(--font-mono); }
 
 /* ── Reactor Quest ───────────────────────────────────────────── */
-.reactor-body     { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; }
-.reactor-viz      { display: flex; flex-direction: column; align-items: center; gap: 6px; }
-.reactor-status-label { font-size: 13px; font-weight: 700; font-family: var(--font-mono); }
-.reactor-controls { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 10px; }
-.reactor-row label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
-.reactor-hint { font-size: 12px; color: var(--warn); font-family: var(--font-mono); min-height: 18px; }
-.reactor-stable-bar  { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 4px; }
-.reactor-stable-fill { height: 100%; width: 0%; background: var(--success); border-radius: 3px; transition: width 0.1s linear; }
+.reactor-body          { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; }
+.reactor-viz           { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.reactor-status-label  { font-size: 13px; font-weight: 700; font-family: var(--font-mono); }
+.reactor-controls      { flex: 1; min-width: 220px; display: flex; flex-direction: column; gap: 12px; }
+.reactor-hint          { font-size: 12px; color: var(--warn); font-family: var(--font-mono); min-height: 18px; }
+.reactor-stable-row    { display: flex; flex-direction: column; gap: 6px; }
+.reactor-stable-bg     { height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+.reactor-stable-fill   { height: 100%; width: 0%; background: var(--success); border-radius: 4px; transition: width 0.2s linear; }
+
+/* Parameter gauge rows */
+.rparam           { display: flex; flex-direction: column; gap: 4px; }
+.rparam-head      { display: flex; justify-content: space-between; font-size: 13px; }
+.rparam-val       { font-family: var(--font-mono); font-weight: 700; min-width: 28px; text-align: right; }
+.rparam-gauge     { padding: 4px 0; }
+.rparam-track     { position: relative; height: 10px; background: #1a1a3a; border-radius: 5px; overflow: hidden; }
+.rparam-ok        { position: absolute; top: 0; height: 100%; background: rgba(0,255,136,0.25); border-radius: 5px; }
+.rparam-needle    { position: absolute; top: -2px; width: 3px; height: 14px; background: var(--danger); border-radius: 2px; transform: translateX(-50%); transition: left 0.3s ease, background 0.3s; }
+.rparam-btns      { display: flex; gap: 8px; }
+.rparam-btn       { flex: 1; padding: 5px 0; font-size: 18px; line-height: 1; background: var(--card); border: 1px solid var(--border); border-radius: 6px; color: var(--text); cursor: pointer; transition: background 0.15s; }
+.rparam-btn:hover { background: var(--accent); color: #000; }
+.rparam-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* ── Food Calc Quest ─────────────────────────────────────────── */
 .calc-problem    { background: rgba(255,255,255,0.04); border-radius: 6px; padding: 12px; margin-bottom: 10px; line-height: 1.8; }

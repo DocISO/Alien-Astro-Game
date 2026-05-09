@@ -230,148 +230,308 @@ const QuestPanel = (() => {
     };
   }
 
-  // ── Quest 3: Fusion Reactor Balance ──────────────────────────────────────────
+  // ── Quest 3: Fusion Reactor Balance (dynamic) ────────────────────────────────
 
   function renderReactor(wrapper, entry, done) {
-    const targets  = entry.reactorTargets;
-    let stableTime = 0;
-    let stableInterval = null;
-    let finished = false;
+    // Physics state — all values 0–100
+    let T = 62, M = 70, F = 57;
+    let stableTicks = 0;
+    let tickInterval = null;
+    let animFrame    = null;
+    let finished     = false;
+
+    // OK zones (all three must be in range to be stable)
+    const T_OK = [55, 82], M_OK = [50, 78], F_OK = [38, 72];
+    // Danger zones — breaching either end triggers KI
+    const T_DNG = [18, 95], M_DNG = [16, 94], F_DNG = [12, 88];
+
+    const STABLE_NEEDED = 32; // ticks at 550 ms ≈ 17.6 s
 
     const body = document.createElement("div");
     body.className = "reactor-body";
     body.innerHTML = `
       <div class="reactor-viz">
-        <canvas id="react-cvs" width="180" height="180"></canvas>
+        <canvas id="react-cvs" width="190" height="190"></canvas>
         <div id="react-status" class="reactor-status-label">⚠️ Instabil</div>
       </div>
       <div class="reactor-controls">
-        <div class="reactor-row">
-          <label>🌡️ Temperatur &nbsp;<span id="rv-t">50</span></label>
-          <input type="range" id="rsl-t" class="config-slider" min="0" max="100" value="50">
+        <div class="rparam" id="rp-t">
+          <div class="rparam-head">
+            <span>🌡️ Temperatur</span>
+            <span class="rparam-val" id="rv-t">62</span>
+          </div>
+          <div class="rparam-gauge"><div class="rparam-track">
+            <div class="rparam-ok"  id="rok-t"></div>
+            <div class="rparam-needle" id="rnd-t"></div>
+          </div></div>
+          <div class="rparam-btns">
+            <button class="rparam-btn" id="rbtn-t-dn">−</button>
+            <button class="rparam-btn" id="rbtn-t-up">+</button>
+          </div>
         </div>
-        <div class="reactor-row">
-          <label>🧲 Magnetfeld &nbsp;<span id="rv-m">50</span></label>
-          <input type="range" id="rsl-m" class="config-slider" min="0" max="100" value="50">
+        <div class="rparam" id="rp-m">
+          <div class="rparam-head">
+            <span>🧲 Magnetfeld</span>
+            <span class="rparam-val" id="rv-m">70</span>
+          </div>
+          <div class="rparam-gauge"><div class="rparam-track">
+            <div class="rparam-ok"  id="rok-m"></div>
+            <div class="rparam-needle" id="rnd-m"></div>
+          </div></div>
+          <div class="rparam-btns">
+            <button class="rparam-btn" id="rbtn-m-dn">−</button>
+            <button class="rparam-btn" id="rbtn-m-up">+</button>
+          </div>
         </div>
-        <div class="reactor-row">
-          <label>⚗️ Brennstoff &nbsp;<span id="rv-f">50</span></label>
-          <input type="range" id="rsl-f" class="config-slider" min="0" max="100" value="50">
+        <div class="rparam" id="rp-f">
+          <div class="rparam-head">
+            <span>⚗️ Brennstoff</span>
+            <span class="rparam-val" id="rv-f">57</span>
+          </div>
+          <div class="rparam-gauge"><div class="rparam-track">
+            <div class="rparam-ok"  id="rok-f"></div>
+            <div class="rparam-needle" id="rnd-f"></div>
+          </div></div>
+          <div class="rparam-btns">
+            <button class="rparam-btn" id="rbtn-f-dn">−</button>
+            <button class="rparam-btn" id="rbtn-f-up">+</button>
+          </div>
         </div>
-        <div id="react-hint" class="reactor-hint"></div>
-        <div id="react-stable-bar" class="reactor-stable-bar" style="display:none">
-          <div id="react-stable-fill" class="reactor-stable-fill"></div>
+        <div class="reactor-stable-row">
+          <span id="react-hint" class="reactor-hint">Bringe alle Parameter in die grüne Zone und halte sie stabil.</span>
+          <div id="react-stable-bg" class="reactor-stable-bg" style="display:none">
+            <div id="react-stable-fill" class="reactor-stable-fill"></div>
+          </div>
         </div>
       </div>
     `;
     wrapper.appendChild(body);
 
-    // Timeout give-up button after 90 s
-    let giveUpTimer = setTimeout(() => {
-      if (finished) return;
-      const btn = makeBtn("⚠️ Notabschaltung (Treibstoff −8%)", "quest-btn quest-btn-warn");
-      btn.onclick = () => { finished = true; done(false); };
-      wrapper.appendChild(btn);
-    }, 90000);
-
-    function drawReactor(t, m, f, stable) {
+    // ── Canvas renderer ──────────────────────────────────────────────────────
+    let plasmaPhase = 0;
+    function drawReactor() {
       const cvs = document.getElementById("react-cvs");
       if (!cvs) return;
       const ctx = cvs.getContext("2d");
-      const cx = 90, cy = 90;
-      ctx.clearRect(0, 0, 180, 180);
+      const cx = 95, cy = 95;
+      ctx.clearRect(0, 0, 190, 190);
       ctx.fillStyle = "#07071a";
-      ctx.fillRect(0, 0, 180, 180);
+      ctx.fillRect(0, 0, 190, 190);
 
-      // Magnetic coils (rings)
-      for (let r = 55; r <= 80; r += 8) {
+      // Magnetic coil rings — brightness driven by M
+      for (let r = 55; r <= 82; r += 9) {
         ctx.beginPath();
-        ctx.ellipse(cx, cy, r, r * 0.38, 0, 0, Math.PI * 2);
-        ctx.strokeStyle = `rgba(80,130,255,${0.15 + m / 250})`;
+        ctx.ellipse(cx, cy, r, r * 0.36, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(80,130,255,${0.10 + M / 300})`;
         ctx.lineWidth = 2;
         ctx.stroke();
       }
 
-      // Plasma core
-      const pSize = 18 + f * 0.28;
-      const hue   = stable ? 170 : 20 + t * 0.8;
-      const grad  = ctx.createRadialGradient(cx, cy, 0, cx, cy, pSize);
-      grad.addColorStop(0, `hsla(${hue},100%,75%,1)`);
+      // Plasma core — flickers with phase, color shifts with T
+      plasmaPhase += 0.18;
+      const flicker = 0.9 + 0.1 * Math.sin(plasmaPhase * 2.3) + 0.05 * Math.sin(plasmaPhase * 5.1);
+      const pSize   = (16 + F * 0.26) * flicker;
+      const inOK    = T >= T_OK[0] && T <= T_OK[1] && M >= M_OK[0] && M <= M_OK[1] && F >= F_OK[0] && F <= F_OK[1];
+      const hue     = inOK ? 160 + 20 * Math.sin(plasmaPhase * 0.5) : 15 + T * 0.7;
+      const grad    = ctx.createRadialGradient(cx, cy, 0, cx, cy, pSize);
+      grad.addColorStop(0,   `hsla(${hue},100%,80%,1)`);
       grad.addColorStop(0.5, `hsla(${hue},100%,55%,0.7)`);
-      grad.addColorStop(1, `hsla(${hue},100%,40%,0)`);
+      grad.addColorStop(1,   `hsla(${hue},100%,35%,0)`);
       ctx.beginPath();
       ctx.arc(cx, cy, pSize, 0, Math.PI * 2);
       ctx.fillStyle = grad;
       ctx.fill();
 
-      // Stability ring
-      if (stable) {
+      // Outer stability ring
+      if (inOK) {
         ctx.beginPath();
-        ctx.arc(cx, cy, 45, 0, Math.PI * 2);
-        ctx.strokeStyle = "rgba(0,255,140,0.6)";
+        ctx.arc(cx, cy, 48, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(0,255,140,${0.4 + 0.3 * Math.sin(plasmaPhase)})`;
         ctx.lineWidth = 3;
         ctx.stroke();
       }
+
+      animFrame = requestAnimationFrame(drawReactor);
     }
 
-    function check() {
-      const t  = parseInt(document.getElementById("rsl-t").value);
-      const m  = parseInt(document.getElementById("rsl-m").value);
-      const f  = parseInt(document.getElementById("rsl-f").value);
-      document.getElementById("rv-t").textContent = t;
-      document.getElementById("rv-m").textContent = m;
-      document.getElementById("rv-f").textContent = f;
+    // ── Gauge renderer ───────────────────────────────────────────────────────
+    function updateGauges() {
+      const params = [
+        { id: "t", val: T, ok: T_OK, dng: T_DNG },
+        { id: "m", val: M, ok: M_OK, dng: M_DNG },
+        { id: "f", val: F, ok: F_OK, dng: F_DNG },
+      ];
+      params.forEach(({ id, val, ok }) => {
+        const valEl    = document.getElementById(`rv-${id}`);
+        const needleEl = document.getElementById(`rnd-${id}`);
+        const okEl     = document.getElementById(`rok-${id}`);
+        if (!valEl) return;
+        valEl.textContent      = Math.round(val);
+        needleEl.style.left    = val + "%";
+        okEl.style.left        = ok[0] + "%";
+        okEl.style.width       = (ok[1] - ok[0]) + "%";
+        const inOkZone = val >= ok[0] && val <= ok[1];
+        valEl.style.color      = inOkZone ? "var(--success)" : "var(--danger)";
+        needleEl.style.background = inOkZone ? "var(--success)" : "var(--danger)";
+      });
+    }
 
-      const tOk = t >= targets.temp[0] && t <= targets.temp[1];
-      const mOk = m >= targets.mag[0]  && m <= targets.mag[1];
-      const fOk = f >= targets.fuel[0] && f <= targets.fuel[1];
-      const stable = tOk && mOk && fOk;
+    // ── Physics tick ─────────────────────────────────────────────────────────
+    function tick() {
+      if (finished) return;
 
-      drawReactor(t, m, f, stable);
+      // Natural drift
+      T += 1.05 + Math.random() * 0.15;   // heat builds up
+      M -= 0.75 + Math.random() * 0.12;   // coils slowly decay
+      F -= 0.55 + Math.random() * 0.10;   // fuel consumed
 
-      const statusEl = document.getElementById("react-status");
-      const hintEl   = document.getElementById("react-hint");
-      const barWrap  = document.getElementById("react-stable-bar");
-      const barFill  = document.getElementById("react-stable-fill");
+      // Hidden cross-coupling (undocumented to player)
+      M -= (T - 68) * 0.055;
+      T += (64 - M) * 0.040;
 
-      if (stable) {
-        statusEl.textContent  = "✅ STABIL — Fusion läuft!";
-        statusEl.style.color  = "var(--success)";
-        barWrap.style.display = "block";
-        hintEl.textContent    = "Halte die Balance für 3 Sekunden …";
-        if (!stableInterval) {
-          stableTime = 0;
-          stableInterval = setInterval(() => {
-            stableTime += 100;
-            barFill.style.width = (stableTime / 3000 * 100) + "%";
-            if (stableTime >= 3000) {
-              clearInterval(stableInterval);
-              clearTimeout(giveUpTimer);
-              finished = true;
-              showExplanation(wrapper, true,
-                "✅ Perfekt! Ein Fusionsreaktor braucht genug Hitze (≥ 100 Mio. °C), ein starkes Magnetfeld das Plasma einzuschließen (Tokamak-Prinzip), und exakt die richtige Brennstoffmenge — zu viel und er wird unkontrollierbar!"
-              );
-              continueBtn(wrapper, done, true);
-            }
-          }, 100);
+      T = Math.max(0, Math.min(100, T));
+      M = Math.max(0, Math.min(100, M));
+      F = Math.max(0, Math.min(100, F));
+
+      updateGauges();
+      updateStatus();
+
+      // Check danger
+      const tDanger = T < T_DNG[0] || T > T_DNG[1];
+      const mDanger = M < M_DNG[0] || M > M_DNG[1];
+      const fDanger = F < F_DNG[0] || F > F_DNG[1];
+      if (tDanger || mDanger || fDanger) {
+        triggerKI();
+        return;
+      }
+
+      // Check stable
+      const inOK = T >= T_OK[0] && T <= T_OK[1] && M >= M_OK[0] && M <= M_OK[1] && F >= F_OK[0] && F <= F_OK[1];
+      if (inOK) {
+        stableTicks++;
+        const pct = Math.min(100, stableTicks / STABLE_NEEDED * 100);
+        const bg   = document.getElementById("react-stable-bg");
+        const fill = document.getElementById("react-stable-fill");
+        if (bg)   bg.style.display   = "block";
+        if (fill) fill.style.width   = pct + "%";
+        if (stableTicks >= STABLE_NEEDED) {
+          clearInterval(tickInterval);
+          cancelAnimationFrame(animFrame);
+          finished = true;
+          showExplanation(wrapper, true,
+            "✅ Perfekt! Ein Fusionsreaktor braucht genug Hitze (über 100 Mio. °C), ein starkes Magnetfeld, das das Plasma einschließt (Tokamak-Prinzip), und genau die richtige Brennstoffmenge. Die Parameter beeinflussen sich gegenseitig — das ist der Trick!"
+          );
+          continueBtn(wrapper, done, true);
         }
       } else {
-        statusEl.textContent  = "⚠️ INSTABIL";
-        statusEl.style.color  = "var(--danger)";
-        barWrap.style.display = "none";
-        if (stableInterval) { clearInterval(stableInterval); stableInterval = null; }
-        const hints = [];
-        if (!tOk) hints.push(t < targets.temp[0] ? "Temperatur zu niedrig" : "Temperatur zu hoch");
-        if (!mOk) hints.push(m < targets.mag[0]  ? "Magnetfeld zu schwach"  : "Magnetfeld zu stark");
-        if (!fOk) hints.push(f < targets.fuel[0] ? "Brennstoff zu wenig"    : "Brennstoff zu viel");
-        hintEl.textContent = hints.join("  ·  ");
+        stableTicks = 0;
+        const bg = document.getElementById("react-stable-bg");
+        if (bg) bg.style.display = "none";
       }
     }
 
-    ["rsl-t", "rsl-m", "rsl-f"].forEach(id =>
-      document.getElementById(id).addEventListener("input", check)
-    );
-    check();
+    function updateStatus() {
+      const statusEl = document.getElementById("react-status");
+      const hintEl   = document.getElementById("react-hint");
+      if (!statusEl) return;
+      const inOK = T >= T_OK[0] && T <= T_OK[1] && M >= M_OK[0] && M <= M_OK[1] && F >= F_OK[0] && F <= F_OK[1];
+      if (inOK) {
+        statusEl.textContent = "✅ STABIL — Fusion läuft!";
+        statusEl.style.color = "var(--success)";
+        if (hintEl) hintEl.textContent = "Halten! Alle Parameter in der grünen Zone …";
+      } else {
+        statusEl.textContent = "⚠️ INSTABIL";
+        statusEl.style.color = "var(--danger)";
+        if (hintEl) {
+          const hints = [];
+          if (T < T_OK[0]) hints.push("T zu niedrig"); else if (T > T_OK[1]) hints.push("T zu hoch");
+          if (M < M_OK[0]) hints.push("M zu schwach"); else if (M > M_OK[1]) hints.push("M zu stark");
+          if (F < F_OK[0]) hints.push("F zu wenig");  else if (F > F_OK[1]) hints.push("F zu viel");
+          hintEl.textContent = hints.join("  ·  ") || "Justiere die Parameter …";
+        }
+      }
+    }
+
+    // ── KI intervention on danger breach ─────────────────────────────────────
+    function triggerKI() {
+      clearInterval(tickInterval);
+      finished = true;
+
+      const statusEl = document.getElementById("react-status");
+      if (statusEl) {
+        statusEl.textContent = "🤖 KI greift ein!";
+        statusEl.style.color = "var(--warn)";
+      }
+      disableButtons();
+
+      // Animate parameters back to safe values
+      let step = 0;
+      const tTarget = 68, mTarget = 64, fTarget = 55;
+      const recover = setInterval(() => {
+        T += (tTarget - T) * 0.25;
+        M += (mTarget - M) * 0.25;
+        F += (fTarget - F) * 0.25;
+        updateGauges();
+        step++;
+        if (step >= 14) {
+          clearInterval(recover);
+          cancelAnimationFrame(animFrame);
+          showExplanation(wrapper, false,
+            "⚠️ Die Bordcomputer-KI hat eingegriffen und den Reaktor stabilisiert — ein Parameter ist in den Gefahrenbereich geraten. Fusionsreaktoren sind empfindlich: Temperatur und Magnetfeld beeinflussen sich gegenseitig!"
+          );
+          continueBtn(wrapper, done, false);
+        }
+      }, 120);
+    }
+
+    function disableButtons() {
+      ["rbtn-t-up","rbtn-t-dn","rbtn-m-up","rbtn-m-dn","rbtn-f-up","rbtn-f-dn"].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.disabled = true;
+      });
+    }
+
+    // ── Button event handlers ─────────────────────────────────────────────────
+    function clamp(v) { return Math.max(0, Math.min(100, v)); }
+
+    document.getElementById("rbtn-t-up").addEventListener("click", () => {
+      if (finished) return;
+      T = clamp(T + 5);
+      M = clamp(M + 5 * 0.12); // hidden nudge
+      updateGauges(); updateStatus();
+    });
+    document.getElementById("rbtn-t-dn").addEventListener("click", () => {
+      if (finished) return;
+      T = clamp(T - 5);
+      updateGauges(); updateStatus();
+    });
+    document.getElementById("rbtn-m-up").addEventListener("click", () => {
+      if (finished) return;
+      M = clamp(M + 5);
+      T = clamp(T + 5 * 0.10); // hidden nudge
+      updateGauges(); updateStatus();
+    });
+    document.getElementById("rbtn-m-dn").addEventListener("click", () => {
+      if (finished) return;
+      M = clamp(M - 5);
+      updateGauges(); updateStatus();
+    });
+    document.getElementById("rbtn-f-up").addEventListener("click", () => {
+      if (finished) return;
+      F = clamp(F + 5);
+      updateGauges(); updateStatus();
+    });
+    document.getElementById("rbtn-f-dn").addEventListener("click", () => {
+      if (finished) return;
+      F = clamp(F - 5);
+      updateGauges(); updateStatus();
+    });
+
+    // Start everything
+    updateGauges();
+    updateStatus();
+    drawReactor();
+    tickInterval = setInterval(tick, 550);
   }
 
   // ── Quest 4: Food Calculation ─────────────────────────────────────────────────
