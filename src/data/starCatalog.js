@@ -44,21 +44,27 @@ function randBetween(lo, hi) {
   return lo + Math.random() * (hi - lo);
 }
 
+// Distance ranges per ship zone — guaranteed 33 % of stars in each zone
+// Zone 0 → Scout (≤ 30 ly), Zone 1 → Cruiser (31–65 ly), Zone 2 → Colony (66–150 ly)
+const ZONE_RANGES = [[5, 30], [31, 65], [66, 150]];
+
 /**
  * Generates a single star's physical properties (no position yet).
- * @param {number} id       Unique integer index
+ * @param {number} id        Unique integer index
  * @param {string} signalType  Pre-assigned signal type for even distribution
+ * @param {number} zone      Distance zone (0 Scout / 1 Cruiser / 2 Colony)
  * @returns {StarObject}
  */
-function generateStar(id, signalType) {
+function generateStar(id, signalType, zone) {
   const cls    = pickStellarClass();
   const def    = STELLAR_CLASSES[cls];
   const temp   = Math.round(randBetween(...def.tempRange));
   const lum    = parseFloat(randBetween(...def.luminosityRange).toFixed(4));
   // Stellar radius: L = R² · (T/T☉)⁴  →  R = √L / (T/5778)²
   const radius = parseFloat((Math.sqrt(lum) / Math.pow(temp / 5778, 2)).toFixed(3));
-  // Distance 5–100 ly, biased towards closer stars
-  const distance = parseFloat((5 + Math.pow(Math.random(), 0.6) * 95).toFixed(2));
+  // Distance drawn uniformly within the pre-assigned zone
+  const [dMin, dMax] = ZONE_RANGES[zone];
+  const distance = parseFloat(randBetween(dMin, dMax).toFixed(2));
 
   return {
     id,
@@ -176,12 +182,23 @@ function generateStarCatalog(count = 1000, canvasW = 1100, canvasH = 640) {
     }
   }
 
-  // ── 4. Build star objects ─────────────────────────────────────────────────
+  // ── 4. Pre-assign distance zones: exactly ⅓ of stars per zone ───────────────
+  // Zones are shuffled independently from signal types so transit stars land
+  // evenly across all three distance ranges without extra bookkeeping.
+  const nPerZone = Math.floor(count / 3);
+  const zonePool = [
+    ...Array(nPerZone).fill(0),               // Scout  (≤ 30 ly)
+    ...Array(nPerZone).fill(1),               // Cruiser (31–65 ly)
+    ...Array(count - 2 * nPerZone).fill(2),   // Colony  (66–150 ly)
+  ];
+  shuffle(zonePool);
+
+  // ── 5. Build star objects ─────────────────────────────────────────────────
   const stars = [];
   for (let i = 0; i < count; i++) {
     const slot   = slots[i];
     const signal = orderedPool[i];
-    const star   = generateStar(i, signal);
+    const star   = generateStar(i, signal, zonePool[i]);
 
     // Jitter within cell (10% margin so stars don't sit exactly on grid lines)
     const jitterX = cellW  * 0.1 + Math.random() * cellW  * 0.8;
@@ -197,5 +214,5 @@ function generateStarCatalog(count = 1000, canvasW = 1100, canvasH = 640) {
 
 // Export for use in other modules
 if (typeof module !== "undefined") {
-  module.exports = { generateStarCatalog, STELLAR_CLASSES, EXOPLANET_PROBABILITY };
+  module.exports = { generateStarCatalog, STELLAR_CLASSES, EXOPLANET_PROBABILITY, ZONE_RANGES };
 }
