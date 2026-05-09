@@ -10,28 +10,29 @@
 // ── Which quests fire on which ship, and when ─────────────────────────────────
 
 const QUEST_SCHEDULE = {
+  // Scout: 3 quests, well spread — dosimeter early, reactor mid, swingby at arrival
   scout: [
-    { fraction: 0.20, id: "dosimeter" },
-    { fraction: 0.55, id: "reactor" },
-    { fraction: 0.85, id: "swingby" },
+    { fraction: 0.18, id: "dosimeter" },
+    { fraction: 0.52, id: "reactor" },
+    { fraction: 0.86, id: "swingby" },
   ],
+  // Cruiser: 5 quests, all different types, no two of the same kind adjacent
   cruiser: [
-    { fraction: 0.12, id: "dosimeter" },
-    { fraction: 0.30, id: "pulsar" },
-    { fraction: 0.50, id: "reactor" },
-    { fraction: 0.68, id: "food_calc" },
+    { fraction: 0.11, id: "dosimeter" },
+    { fraction: 0.28, id: "pulsar" },
+    { fraction: 0.48, id: "reactor" },
+    { fraction: 0.67, id: "food_calc" },
     { fraction: 0.87, id: "swingby" },
   ],
+  // Colony: 7 quests, all 7 types once each, evenly distributed
   colony: [
-    { fraction: 0.06, id: "dosimeter" },
-    { fraction: 0.13, id: "government" },
-    { fraction: 0.21, id: "data_storage" },
-    { fraction: 0.32, id: "pulsar" },
-    { fraction: 0.44, id: "reactor" },
-    { fraction: 0.57, id: "food_calc" },
-    { fraction: 0.67, id: "dosimeter" },
-    { fraction: 0.76, id: "reactor" },
-    { fraction: 0.90, id: "swingby" },
+    { fraction: 0.07, id: "dosimeter" },
+    { fraction: 0.18, id: "government" },
+    { fraction: 0.30, id: "data_storage" },
+    { fraction: 0.43, id: "pulsar" },
+    { fraction: 0.56, id: "reactor" },
+    { fraction: 0.70, id: "food_calc" },
+    { fraction: 0.88, id: "swingby" },
   ],
 };
 
@@ -55,7 +56,6 @@ const QUEST_DEFS = {
       aluminium: "❌ Aluminium ist leicht und strukturell gut, aber kein effektiver Strahlungsschutz gegen kosmische Strahlung. Wasser mit seinen vielen Wasserstoffatomen wäre viel besser gewesen.",
     },
     penalty: { food: 0.06 },
-    bonus: 150,
   },
 
   pulsar: {
@@ -66,7 +66,6 @@ const QUEST_DEFS = {
     nStars: 50,
     nPulsars: 3,
     penalty: { fuel: 0.04 },
-    bonus: 200,
   },
 
   reactor: {
@@ -74,7 +73,6 @@ const QUEST_DEFS = {
     title: "🔬 Fusionsreaktor kritisch!",
     story: "Der Bordcomputer meldet Instabilität im Reaktorkern. Du musst Temperatur, Magnetfeld und Brennstoffzufuhr in Balance bringen — zu viel von einem Parameter zerstört die Fusion.",
     penalty: { fuel: 0.08 },
-    bonus: 180,
   },
 
   food_calc: {
@@ -82,7 +80,6 @@ const QUEST_DEFS = {
     title: "🥔 Versorgungsplanung",
     story: "Der Chefkoch braucht deine Hilfe: Die Bevölkerung an Bord wächst. Er muss wissen, wie viel Nahrung in fünf Jahren gebraucht wird, um den Anbau jetzt anzupassen.",
     penalty: { food: 0.10 },
-    bonus: 120,
   },
 
   swingby: {
@@ -90,7 +87,6 @@ const QUEST_DEFS = {
     title: "🌀 Swing-by Manöver",
     story: "Wir nähern uns dem Zielsystem. Ein direkter Bremsmanöver würde enorme Treibstoffreserven kosten. Stattdessen können wir die Schwerkraft des Zielsternes nutzen — ein sogenannter Swing-by. Aber der Einflugswinkel muss stimmen: zu nah bedeutet Absturz, zu weit bedeutet kein Bremseffekt.",
     penalty: { fuel: 0.12 },
-    bonus: 250,
   },
 
   data_storage: {
@@ -104,7 +100,6 @@ const QUEST_DEFS = {
       { id: "tech",   label: "⚙️ Technik",         min: 15, warn: "Ohne Technikwissen können Schäden am Schiff nicht repariert werden." },
     ],
     penalty: { food: 0.08 },
-    bonus: 160,
   },
 
   government: {
@@ -134,7 +129,6 @@ const QUEST_DEFS = {
         goodFor: "medium",
       },
     ],
-    bonus: 140,
   },
 };
 

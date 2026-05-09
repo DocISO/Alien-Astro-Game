@@ -208,16 +208,13 @@ const StarMapUI = (() => {
         });
         document.getElementById("btn-analyse-nav").disabled = false;
         showTransitBanner(selectedStar.name, activeCurve.transitParams);
-        GameState.addToScore(300, `Transit entdeckt: ${selectedStar.name}`);
       } else {
         const msg = activeCurve.type === "noise"
           ? "Nur Sternvariabilität — kein Planet."
           : "Kein Signal — nächster Stern!";
         showFeedbackToast(msg, "info");
-        GameState.addToScore(20, "Stern untersucht");
       }
 
-      updateScoreDisplay();
       btn.disabled = false;
     });
   }
@@ -347,7 +344,7 @@ const StarMapUI = (() => {
         <div class="transit-hint">→ Klicke "Planeten analysieren" um fortzufahren</div>
       </div>
     `;
-    showFeedbackToast(`Transit bei ${starName}! +300 Punkte`, "success");
+    showFeedbackToast(`Transit bei ${starName} entdeckt!`, "success");
   }
 
   // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -367,11 +364,6 @@ const StarMapUI = (() => {
     toast.className     = "toast " + (type === "info" ? "info" : type);
     toast.style.opacity = 1;
     setTimeout(() => toast.style.opacity = 0, 3500);
-  }
-
-  function updateScoreDisplay() {
-    document.getElementById("score-display").textContent =
-      "Punkte: " + GameState.get("score").toLocaleString();
   }
 
   return { init };

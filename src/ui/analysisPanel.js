@@ -41,16 +41,14 @@ const AnalysisPanelUI = (() => {
       const result = analysePlanet(data.transitParams, data.star);
       currentResult = result;
 
-      // Roll for analysis error (gameplay risk, 15% chance of corrupted data)
+      // Roll for analysis error (15% chance of corrupted data)
       const analysisError = Math.random() < 0.15;
       if (analysisError) {
         const perturbedResult = perturbResult(result);
         GameState.log("Warnung: Messfehler! Daten unzuverlässig.");
-        GameState.addToScore(-100, "Messungenauigkeit – Kalibrierung empfohlen");
         displayResults(perturbedResult, true);
       } else {
         displayResults(result, false);
-        GameState.addToScore(200, "Planetenanalyse abgeschlossen");
       }
 
       GameState.set("currentPlanet", currentResult);
@@ -108,11 +106,6 @@ const AnalysisPanelUI = (() => {
       </table>
     `;
 
-    // Bonus score for habitable planets
-    if (r.hzStatus === "habitable" && !hasError) {
-      const bonus = 50 * r.habitabilityScore;
-      GameState.addToScore(bonus, `Habitabler Planet – ${r.classification}`);
-    }
   }
 
   // ── Orbital Simulation ───────────────────────────────────────────────────────

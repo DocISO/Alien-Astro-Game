@@ -245,11 +245,7 @@ const TravelPlannerUI = (() => {
 
   function applyQuestConsequence(correct, entry, mission, container) {
     const def = entry.questDef;
-    if (correct) {
-      if (def.bonus) GameState.addToScore(def.bonus, `Quest: ${def.title}`);
-      document.getElementById("score-display").textContent =
-        "Punkte: " + GameState.get("score").toLocaleString();
-    } else if (def.penalty) {
+    if (!correct && def.penalty) {
       // Apply resource penalty and log it
       const res = mission.resources;
       const msgs = Object.entries(def.penalty).map(([key, frac]) => {
@@ -306,21 +302,12 @@ const TravelPlannerUI = (() => {
   }
 
   function finishMission(mission) {
-    const bonus = Math.max(300, Math.round(10000 / mission.travelYears_earth));
-    GameState.addToScore(bonus, `Mission zu ${targetPlanet?.starName} abgeschlossen`);
-
     const footer = document.createElement("div");
     footer.className = "log-finish";
-    footer.innerHTML = `
-      <div class="log-finish-title">Mission abgeschlossen!</div>
-      <div class="log-finish-bonus">+${bonus} Punkte</div>
-    `;
+    footer.innerHTML = `<div class="log-finish-title">Mission abgeschlossen!</div>`;
     document.getElementById("logbook-entries").appendChild(footer);
     footer.scrollIntoView({ behavior: "smooth" });
-
     document.getElementById("btn-launch").disabled = false;
-    document.getElementById("score-display").textContent =
-      "Punkte: " + GameState.get("score").toLocaleString();
   }
 
   // ── Example Missions ──────────────────────────────────────────────────────────
