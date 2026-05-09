@@ -572,3 +572,154 @@ canvas { display: block; }
 ::-webkit-scrollbar       { width: 6px; }
 ::-webkit-scrollbar-track { background: #0a0a20; }
 ::-webkit-scrollbar-thumb { background: #2a2a55; border-radius: 3px; }
+
+/* ═══════════════════════════════════════════════════════════════
+   QUEST SYSTEM
+════════════════════════════════════════════════════════════════ */
+
+/* Logbook quest header entry */
+.log-quest-header {
+  background: linear-gradient(90deg, rgba(160,80,255,0.15), transparent);
+  border-left: 3px solid var(--accent2);
+}
+
+/* The quest embed container inside the logbook */
+.quest-embed {
+  margin: 6px 0 10px 0;
+  border-left: 3px solid var(--accent2);
+  padding-left: 0;
+}
+
+/* Outer panel */
+.quest-panel {
+  background: linear-gradient(135deg, #0d0d2a 0%, #12102a 100%);
+  border: 1px solid rgba(160,80,255,0.4);
+  border-radius: 8px;
+  padding: 16px 18px;
+  font-size: 14px;
+}
+
+.quest-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.quest-title  { font-size: 15px; font-weight: 700; color: var(--accent2); }
+.quest-badge  { font-size: 10px; background: var(--accent2); color: #000; padding: 2px 7px; border-radius: 10px; font-weight: 700; text-transform: uppercase; }
+.quest-story  { color: var(--text-dim); font-size: 13px; margin: 0 0 12px; line-height: 1.55; }
+.quest-task   { color: var(--accent); font-size: 13px; margin: 0 0 10px; }
+.quest-question { font-weight: 600; margin: 0 0 12px; color: var(--text-main); }
+
+/* MCQ options */
+.quest-options { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.quest-btn {
+  padding: 9px 18px;
+  border: 1px solid var(--accent2);
+  background: rgba(160,80,255,0.1);
+  color: var(--text-main);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background 0.15s, border-color 0.15s;
+}
+.quest-btn:hover:not(:disabled) { background: rgba(160,80,255,0.25); }
+.quest-btn:disabled { opacity: 0.6; cursor: default; }
+.quest-btn-correct { background: rgba(0,220,120,0.2) !important; border-color: var(--success) !important; color: var(--success) !important; }
+.quest-btn-wrong   { background: rgba(255,60,60,0.2)  !important; border-color: var(--danger)  !important; color: var(--danger)  !important; }
+.quest-btn-warn    { border-color: var(--warn); color: var(--warn); background: rgba(255,180,0,0.1); }
+.quest-btn-launch  { margin-top: 8px; width: 100%; }
+
+/* Explanation box */
+.quest-explanation {
+  margin: 10px 0;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  line-height: 1.55;
+}
+.quest-exp-correct { background: rgba(0,220,120,0.12); border: 1px solid rgba(0,220,120,0.4); color: #b0ffdb; }
+.quest-exp-wrong   { background: rgba(255,60,60,0.12);  border: 1px solid rgba(255,60,60,0.4);  color: #ffb0b0; }
+.quest-exp-info    { background: rgba(80,160,255,0.12); border: 1px solid rgba(80,160,255,0.4); color: #b0d8ff; }
+
+.quest-continue {
+  margin-top: 10px;
+  padding: 8px 22px;
+  background: var(--accent2);
+  color: #000;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 14px;
+}
+.quest-continue:hover { filter: brightness(1.15); }
+
+/* Resolved summary */
+.quest-resolved {
+  padding: 7px 14px;
+  font-size: 12px;
+  color: var(--text-dim);
+  font-style: italic;
+}
+
+/* ── Pulsar Quest ────────────────────────────────────────────── */
+.pulsar-maps   { display: flex; gap: 14px; flex-wrap: wrap; margin: 8px 0; }
+.pulsar-label  { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+.pulsar-canvas { display: block; border: 1px solid var(--border); border-radius: 4px; cursor: crosshair; }
+.pulsar-status { font-size: 12px; color: var(--text-dim); margin: 6px 0; font-family: var(--font-mono); }
+
+/* ── Reactor Quest ───────────────────────────────────────────── */
+.reactor-body     { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; }
+.reactor-viz      { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.reactor-status-label { font-size: 13px; font-weight: 700; font-family: var(--font-mono); }
+.reactor-controls { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 10px; }
+.reactor-row label { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+.reactor-hint { font-size: 12px; color: var(--warn); font-family: var(--font-mono); min-height: 18px; }
+.reactor-stable-bar  { height: 6px; background: var(--border); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+.reactor-stable-fill { height: 100%; width: 0%; background: var(--success); border-radius: 3px; transition: width 0.1s linear; }
+
+/* ── Food Calc Quest ─────────────────────────────────────────── */
+.calc-problem    { background: rgba(255,255,255,0.04); border-radius: 6px; padding: 12px; margin-bottom: 10px; line-height: 1.8; }
+.calc-question   { font-weight: 700; color: var(--accent); margin-top: 8px; }
+.calc-hint       { font-size: 12px; color: var(--text-dim); }
+.calc-input-row  { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+.calc-input {
+  flex: 1; padding: 8px 12px; background: #0a0a20; border: 1px solid var(--border);
+  color: var(--text-main); border-radius: 6px; font-size: 15px; font-family: var(--font-mono);
+}
+
+/* ── Swing-by Quest ──────────────────────────────────────────── */
+.swingby-canvas { display: block; border: 1px solid var(--border); border-radius: 4px; max-width: 100%; }
+.swingby-ctrl   { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.swingby-lbl    { font-size: 12px; color: var(--text-dim); white-space: nowrap; }
+.swingby-ctrl .config-slider { flex: 1; }
+.swingby-status { font-size: 13px; min-height: 20px; margin-bottom: 6px; font-family: var(--font-mono); }
+
+/* ── Data Storage Quest ──────────────────────────────────────── */
+.alloc-grid      { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
+.alloc-row       { display: flex; align-items: center; gap: 10px; }
+.alloc-label     { width: 160px; font-size: 13px; flex-shrink: 0; }
+.alloc-row .config-slider { flex: 1; }
+.alloc-val       { width: 28px; text-align: right; font-family: var(--font-mono); font-size: 13px; }
+.alloc-remaining { font-size: 13px; margin-bottom: 6px; }
+.alloc-warn      { font-size: 12px; color: var(--warn); line-height: 1.5; min-height: 14px; }
+.alloc-issue     { margin-bottom: 2px; }
+
+/* ── Government Quest ────────────────────────────────────────── */
+.gov-cards   { display: flex; gap: 12px; flex-wrap: wrap; margin: 10px 0; }
+.gov-card {
+  flex: 1; min-width: 130px; max-width: 180px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px 12px;
+  cursor: pointer;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s;
+  background: rgba(255,255,255,0.03);
+}
+.gov-card:hover  { border-color: var(--accent2); background: rgba(160,80,255,0.1); }
+.gov-selected    { border-color: var(--accent2) !important; background: rgba(160,80,255,0.2) !important; }
+.gov-icon  { font-size: 28px; margin-bottom: 6px; }
+.gov-name  { font-weight: 700; font-size: 13px; margin-bottom: 6px; }
+.gov-desc  { font-size: 11px; color: var(--text-dim); line-height: 1.5; }

@@ -191,32 +191,94 @@ const TravelPlannerUI = (() => {
 
     GameState.log(`${SHIP_CLASSES[shipClass].emoji} Mission gestartet → ${targetPlanet?.starName}`);
 
-    const entries = generateMissionLog(
+    const storyEntries = generateMissionLog(
       shipClass, crew, distance,
       mission.travelYears_earth, mission.travelYears_crew, mission.generations,
       targetPlanet?.starName || "Zielplanet"
     );
 
-    // Animate entries one by one (600 ms apart)
-    entries.forEach((entry, i) => {
-      setTimeout(() => {
-        appendLogEntry(entry, mission.travelYears);
-        if (i === entries.length - 1) {
-          setTimeout(() => finishMission(mission), 800);
+    // Build quest entries and inject travel years for government quest
+    const questEntries = buildQuestEntries(shipClass, mission.travelYears_crew, crew);
+    questEntries.forEach(q => { q._travelYears = mission.travelYears_crew; });
+
+    // Merge and sort all entries by year
+    const allEntries = [...storyEntries, ...questEntries].sort((a, b) => a.year - b.year);
+
+    // Animate sequentially — pauses on quest entries until player resolves them
+    animateSequential(allEntries, mission);
+  }
+
+  function animateSequential(entries, mission) {
+    let idx = 0;
+
+    function next() {
+      if (idx >= entries.length) {
+        setTimeout(() => finishMission(mission), 800);
+        return;
+      }
+      const entry = entries[idx++];
+
+      if (entry.type === "quest") {
+        // Render quest header in logbook
+        appendQuestHeader(entry, mission.travelYears_earth);
+        // Render interactive quest panel
+        const container = document.getElementById("logbook-entries");
+        const questEl   = document.createElement("div");
+        questEl.className = "quest-embed";
+        container.appendChild(questEl);
+        questEl.scrollIntoView({ behavior: "smooth", block: "nearest" });
+
+        QuestPanel.show(entry, questEl, (correct) => {
+          applyQuestConsequence(correct, entry, mission, container);
+          // Collapse panel to a summary line
+          questEl.innerHTML = `<div class="quest-resolved">${correct ? "✅" : "⚠️"} ${entry.questDef.title} — ${correct ? "bestanden" : "nicht bestanden"}</div>`;
+          setTimeout(next, 700);
+        });
+      } else {
+        appendLogEntry(entry, mission.travelYears_earth);
+        setTimeout(next, 620);
+      }
+    }
+
+    next();
+  }
+
+  function applyQuestConsequence(correct, entry, mission, container) {
+    const def = entry.questDef;
+    if (correct) {
+      if (def.bonus) GameState.addToScore(def.bonus, `Quest: ${def.title}`);
+      document.getElementById("score-display").textContent =
+        "Punkte: " + GameState.get("score").toLocaleString();
+    } else if (def.penalty) {
+      // Apply resource penalty and log it
+      const res = mission.resources;
+      const msgs = Object.entries(def.penalty).map(([key, frac]) => {
+        const loss = Math.round((res[key] || 0) * frac);
+        if (loss > 0) {
+          res[key] = Math.max(0, (res[key] || 0) - loss);
+          const labels = { food: "Nahrung", fuel: "Treibstoff", medical: "Medizin" };
+          return `${labels[key] || key} −${loss.toLocaleString()} t`;
         }
-      }, i * 620);
-    });
+        return null;
+      }).filter(Boolean);
+      if (msgs.length) {
+        const penaltyDiv = document.createElement("div");
+        penaltyDiv.className = "log-entry log-problem";
+        penaltyDiv.innerHTML = `
+          <span class="log-year">Konsequenz</span>
+          <span class="log-icon">📉</span>
+          <span class="log-text">${msgs.join(" · ")}</span>
+        `;
+        container.appendChild(penaltyDiv);
+      }
+    }
   }
 
   function appendLogEntry(entry, totalYears) {
     const container = document.getElementById("logbook-entries");
     const div       = document.createElement("div");
     div.className   = `log-entry log-${entry.type}`;
-
-    const yearLabel = entry.year === 0      ? "Start"
-                    : entry.year >= totalYears ? "Ankunft"
-                    : `Jahr ${entry.year}`;
-
+    const yearLabel = yearTag(entry.year, totalYears);
     div.innerHTML = `
       <span class="log-year">${yearLabel}</span>
       <span class="log-icon">${entry.icon}</span>
@@ -226,8 +288,25 @@ const TravelPlannerUI = (() => {
     div.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
+  function appendQuestHeader(entry, totalYears) {
+    const container = document.getElementById("logbook-entries");
+    const div       = document.createElement("div");
+    div.className   = "log-entry log-quest-header";
+    div.innerHTML = `
+      <span class="log-year">${yearTag(entry.year, totalYears)}</span>
+      <span class="log-icon">🎯</span>
+      <span class="log-text"><strong>MISSION:</strong> ${entry.questDef.title}</span>
+    `;
+    container.appendChild(div);
+    div.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function yearTag(year, totalYears) {
+    return year === 0 ? "Start" : year >= totalYears ? "Ankunft" : `Jahr ${year}`;
+  }
+
   function finishMission(mission) {
-    const bonus = Math.max(300, Math.round(10000 / mission.travelYears));
+    const bonus = Math.max(300, Math.round(10000 / mission.travelYears_earth));
     GameState.addToScore(bonus, `Mission zu ${targetPlanet?.starName} abgeschlossen`);
 
     const footer = document.createElement("div");
