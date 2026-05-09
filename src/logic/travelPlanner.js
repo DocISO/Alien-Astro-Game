@@ -20,19 +20,19 @@ const SHIP_CLASSES = {
   scout: {
     label: "Scout", emoji: "🛸",
     minCrew: 2, maxCrew: 25, baseMass: 80,
-    baseSpeed: 0.20, minSpeed: 0.08, maxDist: SCOUT_MAX_DIST,
+    baseSpeed: 0.30, minSpeed: 0.18, maxDist: SCOUT_MAX_DIST,
     description: "Schnell & leicht. Nur für Kurzdistanzen bis 30 Lj.",
   },
   cruiser: {
     label: "Kreuzer", emoji: "🚀",
     minCrew: 10, maxCrew: 150, baseMass: 400,
-    baseSpeed: 0.13, minSpeed: 0.05, maxDist: COLONY_MIN_DIST,
+    baseSpeed: 0.23, minSpeed: 0.15, maxDist: COLONY_MIN_DIST,
     description: "Ausgewogen. Für Entfernungen bis 65 Lj.",
   },
   colony: {
     label: "Kolonieschiff", emoji: "🌍",
     minCrew: 200, maxCrew: 2000, baseMass: 2000,
-    baseSpeed: 0.07, minSpeed: 0.03, maxDist: Infinity,
+    baseSpeed: 0.17, minSpeed: 0.13, maxDist: Infinity,
     description: "Massiv & nachhaltig. Pflicht ab 65 Lj.",
   },
 };
