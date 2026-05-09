@@ -504,6 +504,14 @@ canvas { display: block; }
 .examples-panel { background: #0d0d22; border: 1px solid var(--border); border-radius: 4px; padding: 12px; }
 .examples-panel h4 { color: var(--accent); font-size: 12px; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 1px; }
 
+.build-note {
+  margin: 8px 0 0;
+  font-size: 0.78rem;
+  color: var(--text-dim);
+  font-style: italic;
+  line-height: 1.5;
+}
+
 .example-mission {
   display: flex;
   justify-content: space-between;

@@ -22,20 +22,51 @@ const SHIP_CLASSES = {
     minCrew: 2, maxCrew: 25, baseMass: 80,
     baseSpeed: 0.30, minSpeed: 0.18, maxDist: SCOUT_MAX_DIST,
     description: "Schnell & leicht. Nur für Kurzdistanzen bis 30 Lj.",
+    buildYearsBase: 15,  buildYearsMax: 30,
+    buildWorkersBase: 80_000,   buildWorkersMax: 200_000,
+    buildCostBase_B: 800,       buildCostMax_B: 2_500,    // Mrd. €
   },
   cruiser: {
     label: "Kreuzer", emoji: "🚀",
     minCrew: 10, maxCrew: 150, baseMass: 400,
     baseSpeed: 0.23, minSpeed: 0.15, maxDist: COLONY_MIN_DIST,
     description: "Ausgewogen. Für Entfernungen bis 65 Lj.",
+    buildYearsBase: 30,  buildYearsMax: 65,
+    buildWorkersBase: 300_000,  buildWorkersMax: 900_000,
+    buildCostBase_B: 5_000,     buildCostMax_B: 22_000,
   },
   colony: {
     label: "Kolonieschiff", emoji: "🌍",
     minCrew: 200, maxCrew: 2000, baseMass: 2000,
     baseSpeed: 0.17, minSpeed: 0.13, maxDist: Infinity,
     description: "Massiv & nachhaltig. Pflicht ab 65 Lj.",
+    buildYearsBase: 80,  buildYearsMax: 200,
+    buildWorkersBase: 1_000_000, buildWorkersMax: 10_000_000,
+    buildCostBase_B: 30_000,    buildCostMax_B: 350_000,
   },
 };
+
+function calculateBuildStats(shipClass, crew) {
+  const def   = SHIP_CLASSES[shipClass];
+  const ratio = (crew - def.minCrew) / Math.max(1, def.maxCrew - def.minCrew);
+
+  const years   = Math.round(def.buildYearsBase   + (def.buildYearsMax   - def.buildYearsBase)   * ratio);
+  const workers = Math.round(def.buildWorkersBase  + (def.buildWorkersMax - def.buildWorkersBase)  * ratio);
+  const costB   = Math.round(def.buildCostBase_B   + (def.buildCostMax_B  - def.buildCostBase_B)   * ratio);
+
+  // Comparison note (NASA budget ≈ 25 Mrd. €/year; world GDP ≈ 100,000 Mrd. €)
+  let note;
+  if (costB < 5_000) {
+    note = `Das entspricht etwa ${Math.round(costB / 25)}× dem NASA-Jahresbudget.`;
+  } else if (costB < 50_000) {
+    note = `Ein weltweites Großprojekt — größer als alles, was die Menschheit je gebaut hat.`;
+  } else {
+    const pct = (costB / 100_000 * 100).toFixed(0);
+    note = `≈ ${pct} % des heutigen Welt-BIP — nur als gemeinsames Projekt aller Nationen über Generationen denkbar.`;
+  }
+
+  return { years, workers, costB, note };
+}
 
 function crewToSpeed(def, crew) {
   const clamped = Math.max(0, Math.min(1, (crew - def.minCrew) / (def.maxCrew - def.minCrew)));
@@ -109,6 +140,8 @@ function calculateMission(cfg) {
   const spareParts = Math.round(shipMass * 0.06 * travelYears_crew);
   const totalMass  = shipMass + fuel + food + medical + spareParts;
 
+  const buildStats = calculateBuildStats(shipClass, crew);
+
   return {
     input: { shipClass, shipLabel: def.label, shipEmoji: def.emoji, crew, speedFrac: v_eff, distance_ly: distance },
     travelYears_earth,
@@ -119,6 +152,7 @@ function calculateMission(cfg) {
     resources: { fuel, food, medical, spareParts, totalMass },
     arrivalYear: new Date().getFullYear() + Math.round(travelYears_earth),
     colonyRequired: distance > COLONY_MIN_DIST,
+    buildStats,
   };
 }
 
@@ -278,7 +312,7 @@ function getExampleMissions(distance_ly) {
 
 if (typeof module !== "undefined") {
   module.exports = {
-    calculateMission, generateMissionLog, getExampleMissions,
+    calculateMission, calculateBuildStats, generateMissionLog, getExampleMissions,
     getRecommendation, availableClasses, validateConfig,
     SHIP_CLASSES, SCOUT_MAX_DIST, COLONY_MIN_DIST, crewToSpeed,
   };

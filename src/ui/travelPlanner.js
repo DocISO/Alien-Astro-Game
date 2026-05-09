@@ -161,6 +161,19 @@ const TravelPlannerUI = (() => {
     document.getElementById("res-parts").textContent    = r.resources.spareParts.toLocaleString();
     document.getElementById("res-total").textContent    = r.resources.totalMass.toLocaleString();
 
+    const b = r.buildStats;
+    document.getElementById("build-years").textContent =
+      b.years + (b.years >= 80 ? " Jahre ⚠ Generationenprojekt" : " Jahre");
+    document.getElementById("build-workers").textContent =
+      b.workers >= 1_000_000
+        ? (b.workers / 1_000_000).toFixed(1).replace(".", ",") + " Mio. Personen"
+        : (Math.round(b.workers / 1000) * 1000).toLocaleString() + " Personen";
+    document.getElementById("build-cost").textContent =
+      b.costB >= 1000
+        ? (b.costB / 1000).toFixed(1).replace(".", ",") + " Bio. €"
+        : b.costB.toLocaleString() + " Mrd. €";
+    document.getElementById("build-note").textContent = b.note;
+
     GameState.set("currentMission", r);
   }
 
