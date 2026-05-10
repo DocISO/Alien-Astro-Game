@@ -263,20 +263,58 @@ function generateMissionLog(shipClass, crew, distance, travelYears_earth, travel
   });
 
   // ── 4. GENERATIONEN-MEILENSTEINE (für lange Reisen) ──────────────────────
-  if (generations >= 2) {
-    add(0.30, "👶", `Die ersten Kinder werden an Bord geboren. Sie kennen die Erde nur aus Büchern.`, "milestone");
+
+  // Colony ships: children are born within the first decade — families were aboard from day 1
+  if (shipClass === "colony") {
+    entries.push({
+      year: 7, icon: "👶",
+      text: "Das erste Kind wird an Bord geboren — 3,4 kg, gesund, laut. Das Schiff wird zur echten Heimat.",
+      type: "milestone",
+    });
+    if (generations >= 3) {
+      add(0.40, "📖", "Die Enkel der Gründer führen jetzt das Schiff. Sie haben eine eigene Sprache entwickelt: neue Wörter für Sterne!", "milestone");
+    }
+    if (generations >= 8) {
+      add(0.65, "🏛️", pick([
+        "Das Schiff hat inzwischen seine eigene Kultur: Musik, Feste, Traditionen — entstanden in den Sternen.",
+        "Zum ersten Mal wird an Bord eine Wahl abgehalten. Die Crew wählt ihren Rat demokratisch.",
+      ]), "milestone");
+    }
+    if (generations >= 12) {
+      add(0.75, "🌌", "Niemand an Bord erinnert sich mehr an die Erde — aber alle träumen vom Zielplaneten.", "milestone");
+    }
+  } else {
+    if (generations >= 2) {
+      add(0.30, "👶", `Die ersten Kinder werden an Bord geboren. Sie kennen die Erde nur aus Büchern.`, "milestone");
+    }
+    if (generations >= 4) {
+      add(0.50, "📖", "Die Enkel der Gründer führen jetzt das Schiff. Sie haben eine eigene Sprache entwickelt: neue Wörter für Sterne!", "milestone");
+    }
+    if (generations >= 8) {
+      add(0.65, "🏛️", pick([
+        "Das Schiff hat inzwischen seine eigene Kultur: Musik, Feste, Traditionen — entstanden in den Sternen.",
+        "Zum ersten Mal wird an Bord eine Wahl abgehalten. Die Crew wählt ihren Rat demokratisch.",
+      ]), "milestone");
+    }
+    if (generations >= 12) {
+      add(0.75, "🌌", "Niemand an Bord erinnert sich mehr an die Erde — aber alle träumen vom Zielplaneten.", "milestone");
+    }
   }
-  if (generations >= 4) {
-    add(0.50, "📖", "Die Enkel der Gründer führen jetzt das Schiff. Sie haben eine eigene Sprache entwickelt: neue Wörter für Sterne!", "milestone");
-  }
-  if (generations >= 8) {
-    add(0.65, "🏛️", pick([
-      "Das Schiff hat inzwischen seine eigene Kultur: Musik, Feste, Traditionen — entstanden in den Sternen.",
-      "Zum ersten Mal wird an Bord eine Wahl abgehalten. Die Crew wählt ihren Rat demokratisch.",
-    ]), "milestone");
-  }
-  if (generations >= 12) {
-    add(0.75, "🌌", "Niemand an Bord erinnert sich mehr an die Erde — aber alle träumen vom Zielplaneten.", "milestone");
+
+  // ── 4b. AMEISEN-EREIGNIS — Story-Trigger für den Datenspeicher-Quest ─────────
+  // Fires just before the data_storage quest (colony: 0.30, cruiser: 0.67)
+  if (shipClass === "colony") {
+    add(0.28, "🐜",
+      "ALARM! Ameisen aus dem Gewächshaus haben sich ausgebreitet — sie gelten als unverzichtbar " +
+      "für die Bestäubung der Pflanzen an Bord. Doch jetzt sind Tausende unkontrolliert durch das Schiff " +
+      "gewandert und in die Datenspeicher-Backups eingedrungen. Mehrere Sicherungslaufwerke sind ausgefallen. " +
+      "Notfallsitzung: Welches Wissen retten wir — es bleibt nicht genug Platz für alles!",
+      "problem");
+  } else if (shipClass === "cruiser") {
+    add(0.65, "🐜",
+      "ALARM! Ameisen aus dem Biologielabor sind entkommen und in die Backup-Datenspeicher eingedrungen. " +
+      "Die Kapazität ist knapp — wir müssen sofort entscheiden, welches Wissen wir für die Zukunft sichern!",
+      "problem");
   }
 
   // ── 5. ANNÄHERUNG ─────────────────────────────────────────────────────────

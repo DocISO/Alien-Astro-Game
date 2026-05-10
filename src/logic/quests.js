@@ -85,7 +85,7 @@ const QUEST_DEFS = {
   data_storage: {
     type: "data_storage",
     title: "💾 Wissen für die Zukunft",
-    story: "Der Datenspeicher hat genau 100 Einheiten Kapazität. Ihr müsst jetzt entscheiden, welches Wissen ihr für die kommenden Generationen sichert. Was ihr weglasst, wird auf der Reise vergessen.",
+    story: "Die Ameisenplage hat Backup-Laufwerke zerstört. Es bleiben nur noch 100 Einheiten Speicherkapazität. Ihr müsst jetzt entscheiden, welches Wissen für die kommenden Generationen gesichert wird — was ihr weglasst, ist für immer verloren.",
     categories: [
       { id: "health", label: "💊 Medizin",         min: 20, warn: "Ohne Medizinwissen wird die Crew krank und es gibt keine Heilung." },
       { id: "food",   label: "🌱 Landwirtschaft",  min: 20, warn: "Ohne Agrarwissen droht Hunger — die Ernte fällt aus." },
