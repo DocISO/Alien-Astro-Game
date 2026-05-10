@@ -294,12 +294,14 @@ const QuestPanel = (() => {
     let animFrame    = null;
     let finished     = false;
 
-    // OK zones (all three must be in range to be stable)
-    const T_OK = [55, 82], M_OK = [50, 78], F_OK = [38, 72];
-    // Danger zones — breaching either end triggers KI
-    const T_DNG = [18, 95], M_DNG = [16, 94], F_DNG = [12, 88];
+    // OK zones (all three in range → stable)
+    const T_OK  = [55, 82], M_OK  = [50, 78], F_OK  = [38, 72];
+    // Warn zones — needle turns orange, status shows "KRITISCH"
+    const T_WRN = [32, 90], M_WRN = [26, 88], F_WRN = [18, 84];
+    // Danger zones — breaching this triggers KI intervention
+    const T_DNG = [12, 97], M_DNG = [10, 95], F_DNG = [8, 90];
 
-    const STABLE_NEEDED = 32; // ticks at 550 ms ≈ 17.6 s
+    const STABLE_NEEDED = 20; // ticks at 1300 ms ≈ 26 s
 
     const body = document.createElement("div");
     body.className = "reactor-body";
@@ -315,7 +317,8 @@ const QuestPanel = (() => {
             <span class="rparam-val" id="rv-t">62</span>
           </div>
           <div class="rparam-gauge"><div class="rparam-track">
-            <div class="rparam-ok"  id="rok-t"></div>
+            <div class="rparam-warn" id="rwrn-t"></div>
+            <div class="rparam-ok"   id="rok-t"></div>
             <div class="rparam-needle" id="rnd-t"></div>
           </div></div>
           <div class="rparam-btns">
@@ -329,7 +332,8 @@ const QuestPanel = (() => {
             <span class="rparam-val" id="rv-m">70</span>
           </div>
           <div class="rparam-gauge"><div class="rparam-track">
-            <div class="rparam-ok"  id="rok-m"></div>
+            <div class="rparam-warn" id="rwrn-m"></div>
+            <div class="rparam-ok"   id="rok-m"></div>
             <div class="rparam-needle" id="rnd-m"></div>
           </div></div>
           <div class="rparam-btns">
@@ -343,7 +347,8 @@ const QuestPanel = (() => {
             <span class="rparam-val" id="rv-f">57</span>
           </div>
           <div class="rparam-gauge"><div class="rparam-track">
-            <div class="rparam-ok"  id="rok-f"></div>
+            <div class="rparam-warn" id="rwrn-f"></div>
+            <div class="rparam-ok"   id="rok-f"></div>
             <div class="rparam-needle" id="rnd-f"></div>
           </div></div>
           <div class="rparam-btns">
@@ -411,22 +416,29 @@ const QuestPanel = (() => {
     // ── Gauge renderer ───────────────────────────────────────────────────────
     function updateGauges() {
       const params = [
-        { id: "t", val: T, ok: T_OK, dng: T_DNG },
-        { id: "m", val: M, ok: M_OK, dng: M_DNG },
-        { id: "f", val: F, ok: F_OK, dng: F_DNG },
+        { id: "t", val: T, ok: T_OK, wrn: T_WRN },
+        { id: "m", val: M, ok: M_OK, wrn: M_WRN },
+        { id: "f", val: F, ok: F_OK, wrn: F_WRN },
       ];
-      params.forEach(({ id, val, ok }) => {
+      params.forEach(({ id, val, ok, wrn }) => {
         const valEl    = document.getElementById(`rv-${id}`);
         const needleEl = document.getElementById(`rnd-${id}`);
         const okEl     = document.getElementById(`rok-${id}`);
+        const wrnEl    = document.getElementById(`rwrn-${id}`);
         if (!valEl) return;
-        valEl.textContent      = Math.round(val);
-        needleEl.style.left    = val + "%";
-        okEl.style.left        = ok[0] + "%";
-        okEl.style.width       = (ok[1] - ok[0]) + "%";
-        const inOkZone = val >= ok[0] && val <= ok[1];
-        valEl.style.color      = inOkZone ? "var(--success)" : "var(--danger)";
-        needleEl.style.background = inOkZone ? "var(--success)" : "var(--danger)";
+        valEl.textContent   = Math.round(val);
+        needleEl.style.left = val + "%";
+        okEl.style.left     = ok[0]  + "%";
+        okEl.style.width    = (ok[1]  - ok[0])  + "%";
+        if (wrnEl) {
+          wrnEl.style.left  = wrn[0] + "%";
+          wrnEl.style.width = (wrn[1] - wrn[0]) + "%";
+        }
+        const inOK   = val >= ok[0]  && val <= ok[1];
+        const inWarn = val >= wrn[0] && val <= wrn[1];
+        const color  = inOK ? "var(--success)" : inWarn ? "var(--warn)" : "var(--danger)";
+        valEl.style.color             = color;
+        needleEl.style.background     = color;
       });
     }
 
@@ -434,14 +446,14 @@ const QuestPanel = (() => {
     function tick() {
       if (finished) return;
 
-      // Natural drift
-      T += 1.05 + Math.random() * 0.15;   // heat builds up
-      M -= 0.75 + Math.random() * 0.12;   // coils slowly decay
-      F -= 0.55 + Math.random() * 0.10;   // fuel consumed
+      // Natural drift — slow enough to react to
+      T += 0.45 + Math.random() * 0.08;   // heat builds up
+      M -= 0.32 + Math.random() * 0.06;   // coils slowly decay
+      F -= 0.22 + Math.random() * 0.05;   // fuel consumed
 
       // Hidden cross-coupling (undocumented to player)
-      M -= (T - 68) * 0.055;
-      T += (64 - M) * 0.040;
+      M -= (T - 68) * 0.020;
+      T += (64 - M) * 0.015;
 
       T = Math.max(0, Math.min(100, T));
       M = Math.max(0, Math.min(100, M));
@@ -488,20 +500,31 @@ const QuestPanel = (() => {
       const statusEl = document.getElementById("react-status");
       const hintEl   = document.getElementById("react-hint");
       if (!statusEl) return;
-      const inOK = T >= T_OK[0] && T <= T_OK[1] && M >= M_OK[0] && M <= M_OK[1] && F >= F_OK[0] && F <= F_OK[1];
+      const inOK   = T >= T_OK[0]  && T <= T_OK[1]  && M >= M_OK[0]  && M <= M_OK[1]  && F >= F_OK[0]  && F <= F_OK[1];
+      const inWarn = T >= T_WRN[0] && T <= T_WRN[1] && M >= M_WRN[0] && M <= M_WRN[1] && F >= F_WRN[0] && F <= F_WRN[1];
       if (inOK) {
         statusEl.textContent = "✅ STABIL — Fusion läuft!";
         statusEl.style.color = "var(--success)";
         if (hintEl) hintEl.textContent = "Halten! Alle Parameter in der grünen Zone …";
-      } else {
-        statusEl.textContent = "⚠️ INSTABIL";
-        statusEl.style.color = "var(--danger)";
+      } else if (inWarn) {
+        statusEl.textContent = "⚠️ INSTABIL — gegensteuern!";
+        statusEl.style.color = "var(--warn)";
         if (hintEl) {
           const hints = [];
           if (T < T_OK[0]) hints.push("T zu niedrig"); else if (T > T_OK[1]) hints.push("T zu hoch");
           if (M < M_OK[0]) hints.push("M zu schwach"); else if (M > M_OK[1]) hints.push("M zu stark");
           if (F < F_OK[0]) hints.push("F zu wenig");  else if (F > F_OK[1]) hints.push("F zu viel");
           hintEl.textContent = hints.join("  ·  ") || "Justiere die Parameter …";
+        }
+      } else {
+        statusEl.textContent = "🔴 KRITISCH — sofort handeln!";
+        statusEl.style.color = "var(--danger)";
+        if (hintEl) {
+          const hints = [];
+          if (T < T_WRN[0]) hints.push("T viel zu niedrig!"); else if (T > T_WRN[1]) hints.push("T viel zu hoch!");
+          if (M < M_WRN[0]) hints.push("M viel zu schwach!"); else if (M > M_WRN[1]) hints.push("M viel zu stark!");
+          if (F < F_WRN[0]) hints.push("F viel zu wenig!");  else if (F > F_WRN[1]) hints.push("F viel zu viel!");
+          hintEl.textContent = hints.join("  ·  ") || "Sofort korrigieren!";
         }
       }
     }
@@ -585,7 +608,7 @@ const QuestPanel = (() => {
     updateGauges();
     updateStatus();
     drawReactor();
-    tickInterval = setInterval(tick, 550);
+    tickInterval = setInterval(tick, 1300);
   }
 
   // ── Quest 4: Food Calculation ─────────────────────────────────────────────────
