@@ -660,10 +660,11 @@ canvas { display: block; }
 }
 
 /* ── Pulsar Quest ────────────────────────────────────────────── */
-.pulsar-maps   { display: flex; gap: 14px; flex-wrap: wrap; margin: 8px 0; }
-.pulsar-label  { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
-.pulsar-canvas { display: block; border: 1px solid var(--border); border-radius: 4px; cursor: crosshair; }
-.pulsar-status { font-size: 12px; color: var(--text-dim); margin: 6px 0; font-family: var(--font-mono); }
+.pulsar-maps      { display: flex; gap: 14px; flex-wrap: wrap; margin: 8px 0; }
+.pulsar-label     { font-size: 11px; color: var(--text-dim); margin-bottom: 4px; }
+.pulsar-canvas    { display: block; border: 1px solid var(--border); border-radius: 4px; cursor: crosshair; }
+.pulsar-grid-hint { font-size: 11px; color: rgba(130,160,220,0.7); font-family: var(--font-mono); margin: 2px 0 6px; }
+.pulsar-status    { font-size: 12px; color: var(--text-dim); margin: 4px 0; font-family: var(--font-mono); }
 
 /* ── Reactor Quest ───────────────────────────────────────────── */
 .reactor-body          { display: flex; gap: 18px; flex-wrap: wrap; align-items: flex-start; }

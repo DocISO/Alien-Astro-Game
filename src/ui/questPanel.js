@@ -117,12 +117,18 @@ const QuestPanel = (() => {
     const NPULSARS = def.nPulsars;
     const W = 370, H = 240;
 
-    // Generate stars
+    // Grid layout — identical in both canvases
+    const COLS = 5, ROWS = 4;
+    const COL_LABELS = "ABCDE";
+    const cellW = W / COLS, cellH = H / ROWS;
+
+    // Generate stars — kept away from grid-label margins
+    const PAD = 18;
     const stars = Array.from({ length: N }, (_, i) => ({
-      x: 12 + Math.random() * (W - 24),
-      y: 12 + Math.random() * (H - 24),
-      r: 1.2 + Math.random() * 1.8,
-      alpha: 0.4 + Math.random() * 0.6,
+      x: PAD + Math.random() * (W - PAD * 2),
+      y: PAD + Math.random() * (H - PAD * 2),
+      r: 1.3 + Math.random() * 1.7,
+      alpha: 0.45 + Math.random() * 0.55,
       isPulsar: i < NPULSARS,
     }));
     // Shuffle so pulsars aren't always at indices 0..N-1
@@ -131,10 +137,10 @@ const QuestPanel = (() => {
       [stars[i], stars[j]] = [stars[j], stars[i]];
     }
 
-    // Drift for non-pulsars (applied to OLD map)
+    // Drift for non-pulsars — larger so movement is clearly visible
     const drift = stars.map(s => ({
-      dx: s.isPulsar ? 0 : (Math.random() < 0.5 ? 1 : -1) * (6 + Math.random() * 10),
-      dy: s.isPulsar ? 0 : (Math.random() < 0.5 ? 1 : -1) * (6 + Math.random() * 10),
+      dx: s.isPulsar ? 0 : (Math.random() < 0.5 ? 1 : -1) * (14 + Math.random() * 16),
+      dy: s.isPulsar ? 0 : (Math.random() < 0.5 ? 1 : -1) * (10 + Math.random() * 14),
     }));
 
     const task = document.createElement("p");
@@ -156,16 +162,64 @@ const QuestPanel = (() => {
     `;
     wrapper.appendChild(mapsRow);
 
+    const hintEl = document.createElement("div");
+    hintEl.className = "pulsar-grid-hint";
+    hintEl.textContent = "Tipp: Vergleiche Sektor für Sektor (A1, A2 …). Pulsare stehen in beiden Karten exakt gleich.";
+    wrapper.appendChild(hintEl);
+
     const statusEl = document.createElement("div");
     statusEl.className = "pulsar-status";
     statusEl.innerHTML = `Gefunden: <span id="pul-found">0</span>/${NPULSARS} &nbsp;|&nbsp; Falsch: <span id="pul-err">0</span>`;
     wrapper.appendChild(statusEl);
+
+    function drawGrid(ctx) {
+      // Dashed grid lines
+      ctx.save();
+      ctx.strokeStyle = "rgba(90,120,180,0.30)";
+      ctx.lineWidth   = 0.8;
+      ctx.setLineDash([3, 5]);
+      for (let c = 1; c < COLS; c++) {
+        ctx.beginPath();
+        ctx.moveTo(c * cellW, 0);
+        ctx.lineTo(c * cellW, H);
+        ctx.stroke();
+      }
+      for (let r = 1; r < ROWS; r++) {
+        ctx.beginPath();
+        ctx.moveTo(0, r * cellH);
+        ctx.lineTo(W, r * cellH);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+
+      // Column letters (top)
+      ctx.fillStyle   = "rgba(130,160,220,0.55)";
+      ctx.font        = "bold 10px monospace";
+      ctx.textAlign   = "center";
+      ctx.textBaseline = "top";
+      for (let c = 0; c < COLS; c++) {
+        ctx.fillText(COL_LABELS[c], (c + 0.5) * cellW, 3);
+      }
+
+      // Row numbers (left)
+      ctx.textAlign    = "left";
+      ctx.textBaseline = "middle";
+      for (let r = 0; r < ROWS; r++) {
+        ctx.fillText(r + 1, 3, (r + 0.5) * cellH);
+      }
+      ctx.restore();
+    }
 
     function drawMap(id, shifted) {
       const cvs = document.getElementById(id);
       const ctx = cvs.getContext("2d");
       ctx.fillStyle = "#030312";
       ctx.fillRect(0, 0, W, H);
+
+      // Grid drawn first — identical in both maps
+      drawGrid(ctx);
+
+      // Stars
       stars.forEach((s, i) => {
         const x = shifted ? s.x + drift[i].dx : s.x;
         const y = shifted ? s.y + drift[i].dy : s.y;
