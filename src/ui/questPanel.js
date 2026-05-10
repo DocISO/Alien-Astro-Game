@@ -45,7 +45,6 @@ const QuestPanel = (() => {
       case "mcq":          renderMCQ(wrapper, entry, done);          break;
       case "pulsar":       renderPulsar(wrapper, entry, done);       break;
       case "reactor":      renderReactor(wrapper, entry, done);      break;
-      case "food_calc":    renderFoodCalc(wrapper, entry, done);     break;
       case "swingby":      renderSwingby(wrapper, entry, done);      break;
       case "data_storage": renderDataStorage(wrapper, entry, done);  break;
       case "government":   renderGovernment(wrapper, entry, done);   break;
@@ -611,380 +610,180 @@ const QuestPanel = (() => {
     tickInterval = setInterval(tick, 1300);
   }
 
-  // ── Quest 4: Food Calculation ─────────────────────────────────────────────────
-
-  function renderFoodCalc(wrapper, entry, done) {
-    const d = entry.foodCalc;
-
-    const prob = document.createElement("div");
-    prob.className = "calc-problem";
-    prob.innerHTML = `
-      <p>Eure Crew besteht aktuell aus <strong>${d.initialCrew} Personen</strong>.</p>
-      <p>Jede Person braucht <strong>${d.kgPerPerson} kg Kartoffeln</strong> pro Jahr.</p>
-      <p>Jedes Jahr werden <strong>${d.births} Kinder</strong> geboren und <strong>${d.deaths} Mensch</strong> stirbt.</p>
-      <p class="calc-question">❓ Wie viele Tonnen Kartoffeln braucht ihr in <strong>Jahr 5</strong>?</p>
-      <p class="calc-hint">Tipp: Berechne zuerst, wie viele Menschen dann an Bord sind. (1&nbsp;Tonne&nbsp;=&nbsp;1000&nbsp;kg)</p>
-    `;
-    wrapper.appendChild(prob);
-
-    const row = document.createElement("div");
-    row.className = "calc-input-row";
-    const input = document.createElement("input");
-    input.type        = "number";
-    input.id          = "calc-inp";
-    input.className   = "calc-input";
-    input.placeholder = "Deine Antwort in Tonnen";
-    input.min = 0; input.max = 99999;
-    const btn = makeBtn("Prüfen ✓");
-    row.appendChild(input);
-    row.appendChild(btn);
-    wrapper.appendChild(row);
-
-    const resultEl = document.createElement("div");
-    wrapper.appendChild(resultEl);
-
-    const submit = () => {
-      const val     = parseInt(input.value, 10);
-      const correct = !isNaN(val) && Math.abs(val - d.answerTons) <= 1;
-      btn.disabled  = true;
-      input.disabled = true;
-
-      showExplanation(resultEl, correct,
-        correct
-          ? `✅ Richtig! Jahr 5: ${d.finalPop} Personen × ${d.kgPerPerson} kg ÷ 1000 = <strong>${d.answerTons} t</strong>`
-          : `❌ Nicht ganz. In Jahr 5 seid ihr ${d.finalPop} Personen (${d.initialCrew} + ${d.births - d.deaths}×5). Das ergibt ${d.finalPop} × ${d.kgPerPerson} = <strong>${d.answerTons} t</strong>.`
-      );
-      continueBtn(wrapper, done, correct);
-    };
-    btn.onclick = submit;
-    input.addEventListener("keydown", e => { if (e.key === "Enter") submit(); });
-  }
-
-  // ── Quest 5: Swing-by Manöver ─────────────────────────────────────────────────
+  // ── Quest 4: Swing-by Manöver (multiple choice) ───────────────────────────────
 
   function renderSwingby(wrapper, entry, done) {
-    const W = 430, H = 310;
-    const CX = W / 2, CY = H / 2;
-    const STAR_R   = 18;
-    const ORBIT_R  = 95;
-    const SAFE_MIN = STAR_R + 14;  // 32 px — closer = crash
-    const SAFE_MAX = 82;           // too far = no gravity assist
-    const planetAng = 2.2;
-    const MAX_ATTEMPTS = 2;
+    const W = 450, H = 280;
+    const STAR_X = 295, STAR_Y = 140, STAR_R = 20;
 
-    let attempts  = 0;
-    let isDrawing = false;
-    let drawnPath = [];
-    let done2     = false;
+    // Three path options — shuffled so correct isn't always the same label
+    const DEFS = [
+      {
+        type: "correct", color: "#00e676",
+        // Sweeps around star from top-left, exits bottom-right — classic slingshot arc
+        seg: [10, 28, 90, -8, 405, 268, 440, 272],
+        wrongText: null,
+      },
+      {
+        type: "crash", color: "#ff5252",
+        // Heads almost straight into the star
+        seg: [10, 115, 145, 122, 260, 137, 277, 141],
+        wrongText: "Zu nah am Stern — das Schiff würde in der Korona verglühen.",
+      },
+      {
+        type: "far", color: "#448aff",
+        // Barely deflected, passes well below star
+        seg: [10, 222, 150, 216, 340, 210, 440, 206],
+        wrongText: "Zu weit vom Stern — die Schwerkraft ist zu schwach für einen Bremseffekt.",
+      },
+    ];
 
-    // Deterministic background stars
-    const bgStars = Array.from({ length: 65 }, (_, i) => ({
-      x: (i * 97 + 13) % W,
-      y: (i * 71 + 7)  % H,
-    }));
-
-    // ── Instruction ───────────────────────────────────────────────────────────
-    const taskEl = document.createElement("p");
-    taskEl.className = "quest-task";
-    taskEl.innerHTML =
-      "Zeichne mit der Maus einen Flugweg <strong>vom Bildrand herein, kurz am Stern vorbei, dann zum Planeten</strong>. " +
-      "Zu nah = Absturz · Zu weit = kein Bremseffekt";
-    wrapper.appendChild(taskEl);
-
-    const attEl = document.createElement("div");
-    attEl.className = "swingby-attempts";
-    attEl.textContent = `Versuch 1 / ${MAX_ATTEMPTS}`;
-    wrapper.appendChild(attEl);
+    // Shuffle
+    for (let i = DEFS.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [DEFS[i], DEFS[j]] = [DEFS[j], DEFS[i]];
+    }
+    DEFS.forEach((d, i) => { d.label = "ABC"[i]; });
+    const correctIdx = DEFS.findIndex(d => d.type === "correct");
+    let answered = false;
 
     // ── Canvas ────────────────────────────────────────────────────────────────
     const cvs = document.createElement("canvas");
-    cvs.width  = W;
-    cvs.height = H;
+    cvs.width = W; cvs.height = H;
     cvs.className = "swingby-canvas";
-    cvs.style.cursor = "crosshair";
     wrapper.appendChild(cvs);
     const ctx = cvs.getContext("2d");
 
-    // ── Feedback ──────────────────────────────────────────────────────────────
-    const feedEl = document.createElement("div");
-    feedEl.className = "swingby-feedback";
-    wrapper.appendChild(feedEl);
+    // ── Buttons ───────────────────────────────────────────────────────────────
+    const btnRow = document.createElement("div");
+    btnRow.className = "swingby-btn-row";
+    const btns = DEFS.map((d, i) => {
+      const b = document.createElement("button");
+      b.className = "swingby-option-btn";
+      b.style.borderColor = d.color;
+      b.style.color       = d.color;
+      b.textContent = `Pfad ${d.label}`;
+      b.addEventListener("click", () => onSelect(i));
+      btnRow.appendChild(b);
+      return b;
+    });
+    wrapper.appendChild(btnRow);
 
-    // ── Draw helpers ──────────────────────────────────────────────────────────
-    function drawBase() {
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function bezierPt(seg, t) {
+      const [x0,y0,x1,y1,x2,y2,x3,y3] = seg;
+      const m = 1 - t;
+      return {
+        x: m**3*x0 + 3*m**2*t*x1 + 3*m*t**2*x2 + t**3*x3,
+        y: m**3*y0 + 3*m**2*t*y1 + 3*m*t**2*y2 + t**3*y3,
+      };
+    }
+
+    function drawArrowHead(p1, p2, color) {
+      const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+      const L = 10;
+      ctx.beginPath();
+      ctx.moveTo(p2.x, p2.y);
+      ctx.lineTo(p2.x - L*Math.cos(angle-0.42), p2.y - L*Math.sin(angle-0.42));
+      ctx.moveTo(p2.x, p2.y);
+      ctx.lineTo(p2.x - L*Math.cos(angle+0.42), p2.y - L*Math.sin(angle+0.42));
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+
+    function drawScene(dimIdx) {
       ctx.clearRect(0, 0, W, H);
       ctx.fillStyle = "#030312";
       ctx.fillRect(0, 0, W, H);
 
-      // BG stars
-      bgStars.forEach(s => {
+      // Paths drawn first (star drawn on top covers crash path inside)
+      DEFS.forEach((d, i) => {
+        ctx.globalAlpha = (dimIdx === i) ? 0.18 : 1.0;
         ctx.beginPath();
-        ctx.arc(s.x, s.y, 0.9, 0, Math.PI * 2);
-        ctx.fillStyle = "rgba(200,215,255,0.3)";
-        ctx.fill();
-      });
-
-      // Zone rings (subtle guides)
-      ctx.setLineDash([3, 6]);
-      ctx.beginPath();
-      ctx.arc(CX, CY, SAFE_MIN, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(255,80,80,0.35)";
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.arc(CX, CY, SAFE_MAX, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(80,255,150,0.35)";
-      ctx.stroke();
-      ctx.setLineDash([]);
-
-      // Planet orbit
-      ctx.beginPath();
-      ctx.arc(CX, CY, ORBIT_R, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(80,180,80,0.25)";
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      // Star glow + core
-      const sg = ctx.createRadialGradient(CX, CY, 0, CX, CY, STAR_R * 2);
-      sg.addColorStop(0, "#fff8d0");
-      sg.addColorStop(0.35, "#ffcc44");
-      sg.addColorStop(1, "transparent");
-      ctx.beginPath();
-      ctx.arc(CX, CY, STAR_R * 2, 0, Math.PI * 2);
-      ctx.fillStyle = sg;
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(CX, CY, STAR_R, 0, Math.PI * 2);
-      ctx.fillStyle = "#fff8d0";
-      ctx.fill();
-
-      // Planet
-      const px = CX + Math.cos(planetAng) * ORBIT_R;
-      const py = CY + Math.sin(planetAng) * ORBIT_R;
-      ctx.beginPath();
-      ctx.arc(px, py, 9, 0, Math.PI * 2);
-      ctx.fillStyle = "#4488ff";
-      ctx.fill();
-      ctx.beginPath();
-      ctx.arc(px, py, 13, 0, Math.PI * 2);
-      ctx.strokeStyle = "rgba(150,200,255,0.4)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // Legend
-      ctx.font = "10px monospace";
-      ctx.fillStyle = "rgba(255,80,80,0.6)";  ctx.fillText("── Zu nah", 6, H - 30);
-      ctx.fillStyle = "rgba(0,255,136,0.7)";  ctx.fillText("── Ideal",  6, H - 18);
-      ctx.fillStyle = "rgba(0,180,255,0.6)";  ctx.fillText("── Zu weit",6, H - 6);
-    }
-
-    function drawUserPath(path, closestIdx) {
-      if (path.length < 2) return;
-      // Color each segment by distance to star
-      for (let i = 1; i < path.length; i++) {
-        const d = Math.hypot(path[i].x - CX, path[i].y - CY);
-        ctx.beginPath();
-        ctx.moveTo(path[i-1].x, path[i-1].y);
-        ctx.lineTo(path[i].x, path[i].y);
-        ctx.strokeStyle = d < SAFE_MIN ? "#ff4444"
-                        : d <= SAFE_MAX ? "#00ff88"
-                        : "#00aaff";
-        ctx.lineWidth = 2.5;
-        ctx.stroke();
-      }
-      // Closest-point marker + distance line
-      if (closestIdx >= 0) {
-        const cp = path[closestIdx];
-        ctx.beginPath();
-        ctx.arc(cp.x, cp.y, 7, 0, Math.PI * 2);
-        ctx.strokeStyle = "#ffcc00";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-        ctx.beginPath();
-        ctx.moveTo(cp.x, cp.y);
-        ctx.lineTo(CX, CY);
-        ctx.strokeStyle = "rgba(255,200,0,0.35)";
-        ctx.lineWidth = 1;
-        ctx.setLineDash([3, 4]);
-        ctx.stroke();
+        ctx.moveTo(d.seg[0], d.seg[1]);
+        ctx.bezierCurveTo(d.seg[2], d.seg[3], d.seg[4], d.seg[5], d.seg[6], d.seg[7]);
+        ctx.strokeStyle = d.color;
+        ctx.lineWidth   = 2.5;
         ctx.setLineDash([]);
-      }
-    }
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      });
 
-    function drawCorrectPath(pts) {
-      if (pts.length < 2) return;
+      // Star glow (drawn on top, covers crash path inside star)
+      const glow = ctx.createRadialGradient(STAR_X, STAR_Y, 0, STAR_X, STAR_Y, STAR_R * 3.5);
+      glow.addColorStop(0, "rgba(255,230,60,0.55)");
+      glow.addColorStop(1, "rgba(255,130,0,0)");
       ctx.beginPath();
-      ctx.moveTo(pts[0].x, pts[0].y);
-      for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
-      ctx.strokeStyle = "#ffcc00";
-      ctx.lineWidth = 2.5;
-      ctx.setLineDash([7, 4]);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      // Ship marker at end
-      const last = pts[pts.length - 1];
-      ctx.beginPath();
-      ctx.arc(last.x, last.y, 5, 0, Math.PI * 2);
-      ctx.fillStyle = "#ffcc00";
+      ctx.arc(STAR_X, STAR_Y, STAR_R * 3.5, 0, Math.PI * 2);
+      ctx.fillStyle = glow;
       ctx.fill();
-    }
 
-    drawBase();
+      // Star core
+      ctx.beginPath();
+      ctx.arc(STAR_X, STAR_Y, STAR_R, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffe844";
+      ctx.fill();
 
-    // ── Mouse events ──────────────────────────────────────────────────────────
-    function getPos(e) {
-      const r = cvs.getBoundingClientRect();
-      return {
-        x: (e.clientX - r.left) * (W / r.width),
-        y: (e.clientY - r.top)  * (H / r.height),
-      };
-    }
+      // Star label
+      ctx.fillStyle = "rgba(255,230,100,0.65)";
+      ctx.font = "11px monospace";
+      ctx.textAlign = "center";
+      ctx.fillText("Zielstern", STAR_X, STAR_Y + STAR_R + 13);
 
-    cvs.addEventListener("mousedown", e => {
-      if (done2) return;
-      isDrawing = true;
-      drawnPath = [getPos(e)];
-    });
+      // Path labels, arrows, crash marker
+      DEFS.forEach((d, i) => {
+        const alpha = (dimIdx === i) ? 0.18 : 1.0;
+        ctx.globalAlpha = alpha;
 
-    cvs.addEventListener("mousemove", e => {
-      if (!isDrawing) return;
-      drawnPath.push(getPos(e));
-      drawBase();
-      drawUserPath(drawnPath, -1);
-    });
+        // Label at path start
+        ctx.fillStyle  = d.color;
+        ctx.font       = "bold 12px monospace";
+        ctx.textAlign  = "left";
+        ctx.fillText(`Pfad ${d.label}`, d.seg[0] + 5, d.seg[1] - 10);
 
-    function finishDraw() {
-      if (!isDrawing) return;
-      isDrawing = false;
-      if (drawnPath.length < 15) { drawnPath = []; return; }
-      analyze();
-    }
-    cvs.addEventListener("mouseup",    finishDraw);
-    cvs.addEventListener("mouseleave", finishDraw);
-
-    // ── Analysis ──────────────────────────────────────────────────────────────
-    function analyze() {
-      attempts++;
-      attEl.textContent = `Versuch ${attempts} / ${MAX_ATTEMPTS}`;
-
-      // Find closest point to star
-      let minDist = Infinity, minIdx = 0;
-      drawnPath.forEach((p, i) => {
-        const d = Math.hypot(p.x - CX, p.y - CY);
-        if (d < minDist) { minDist = d; minIdx = i; }
+        if (d.type === "crash") {
+          // Explosion at star surface
+          ctx.font = "18px serif";
+          ctx.textAlign = "center";
+          ctx.fillText("💥", STAR_X - STAR_R - 1, STAR_Y + 4);
+        } else {
+          // Arrow head at end of path
+          drawArrowHead(bezierPt(d.seg, 0.93), bezierPt(d.seg, 1.0), d.color);
+          ctx.fillStyle = d.color;
+          ctx.font = "10px monospace";
+          ctx.textAlign = "right";
+          ctx.fillText("→ Ziel", W - 4, d.seg[7] - 7);
+        }
+        ctx.globalAlpha = 1;
       });
+    }
 
-      // Start at edge?
-      const s0 = drawnPath[0];
-      const edgeDist = Math.min(s0.x, W - s0.x, s0.y, H - s0.y);
-      const startsEdge = edgeDist < 90;
+    drawScene(-1);
 
-      const tooClose = minDist < SAFE_MIN;
-      const tooFar   = minDist > SAFE_MAX;
-      const correct  = startsEdge && !tooClose && !tooFar;
+    // ── Selection handler ─────────────────────────────────────────────────────
+    function onSelect(idx) {
+      if (answered) return;
+      answered = true;
+      btns.forEach(b => b.disabled = true);
 
-      // Redraw with analysis
-      drawBase();
-      drawUserPath(drawnPath, minIdx);
+      const isCorrect   = (idx === correctIdx);
+      const correctDef  = DEFS[correctIdx];
+      const selectedDef = DEFS[idx];
 
-      // Feedback rows
-      feedEl.innerHTML = "";
-      const distFromSurface = Math.round(minDist - STAR_R);
+      // Dim the wrong choice
+      drawScene(isCorrect ? -1 : idx);
 
-      [
-        {
-          ok: startsEdge,
-          text: startsEdge
-            ? "Flugbahn startet außerhalb des Systems ✓"
-            : "⚠ Starte deinen Flugweg am Rand des Bildes!",
-        },
-        {
-          ok: !tooClose && !tooFar,
-          text: tooClose
-            ? `⚠ Zu nah! Nächster Punkt lag ${distFromSurface} px vom Sternrand — Absturzgefahr. Mindestabstand: ${Math.round(SAFE_MIN - STAR_R)} px`
-            : tooFar
-            ? `⚠ Zu weit! Nächster Punkt: ${distFromSurface} px — Schwerkraft zu schwach. Maximalabstand: ${Math.round(SAFE_MAX - STAR_R)} px`
-            : `Idealer Abstand: ${distFromSurface} px vom Sternrand — Schwerkraft nutzbar ✓`,
-        },
-      ].forEach(r => {
-        const row = document.createElement("div");
-        row.className = "swingby-fb-row " + (r.ok ? "fb-ok" : "fb-err");
-        row.textContent = r.text;
-        feedEl.appendChild(row);
-      });
-
-      if (correct || attempts >= MAX_ATTEMPTS) {
-        done2 = true;
-        cvs.style.cursor = "default";
-        // Explanation text
-        const expEl = document.createElement("div");
-        expEl.className = `quest-explanation ${correct ? "quest-exp-correct" : "quest-exp-wrong"}`;
-        expEl.innerHTML = correct
-          ? "✅ Perfekt! Die Schwerkraft des Sterns hat das Schiff abgebremst und auf Kurs gebracht — ohne Treibstoff. Genauso nutzte die Sonde Voyager&nbsp;2 die Planeten des Sonnensystems!"
-          : "❌ Nicht ganz — hier ist der korrekte Swing-by:";
-        wrapper.appendChild(expEl);
-
-        // Animate correct path
-        const correctPts = computeCorrectPath();
-        let step = 0;
-        const anim = setInterval(() => {
-          step = Math.min(step + 3, correctPts.length);
-          drawBase();
-          if (!correct) drawUserPath(drawnPath, minIdx);  // keep user path visible
-          drawCorrectPath(correctPts.slice(0, step));
-          if (step >= correctPts.length) {
-            clearInterval(anim);
-            continueBtn(wrapper, done, correct);
-          }
-        }, 20);
-
+      if (isCorrect) {
+        showExplanation(wrapper, true,
+          "✅ Richtig! Der Swing-by nutzt die Schwerkraft des Sterns als kostenlosen Bremsmotor. Das Schiff passiert den Stern nah genug, damit die Gravitation es ablenkt — ohne Treibstoff zu verbrauchen. Genau so funktionierte Voyager 2, als es alle vier Gasriesen des Sonnensystems nutzte."
+        );
       } else {
-        // Retry button
-        const retryBtn = makeBtn("🔄 Nochmal zeichnen (Versuch 2)", "quest-btn");
-        retryBtn.onclick = () => {
-          drawnPath = [];
-          feedEl.innerHTML = "";
-          retryBtn.remove();
-          drawBase();
-          cvs.style.cursor = "crosshair";
-        };
-        feedEl.appendChild(retryBtn);
+        showExplanation(wrapper, false,
+          `❌ ${selectedDef.wrongText} Pfad ${correctDef.label} ist der ideale Swing-by: nah genug für starke Gravitation, weit genug um nicht zu verbrennen.`
+        );
       }
-    }
-
-    // ── Ideal trajectory ──────────────────────────────────────────────────────
-    function computeCorrectPath() {
-      const AD = 55;  // ideal approach distance (middle of safe zone)
-      const pts = [];
-      const entX = 28, entY = 28;
-      const dx = CX - entX, dy = CY - entY;
-      const len = Math.hypot(dx, dy);
-      const ux = dx / len, uy = dy / len;
-      const perpX = -uy, perpY = ux;
-      const aimX = CX + perpX * AD, aimY = CY + perpY * AD;
-
-      // Straight approach
-      for (let i = 0; i <= 45; i++)
-        pts.push({ x: entX + (aimX - entX) * i / 45, y: entY + (aimY - entY) * i / 45 });
-
-      // Hyperbolic arc
-      const periAng = Math.atan2(aimY - CY, aimX - CX);
-      const sweep   = Math.PI * 1.4;
-      for (let i = 1; i <= 60; i++) {
-        const ang = periAng + sweep * i / 60;
-        pts.push({ x: CX + Math.cos(ang) * AD, y: CY + Math.sin(ang) * AD });
-      }
-
-      // Exit toward planet
-      const exitAng = periAng + sweep;
-      const exX = CX + Math.cos(exitAng) * AD;
-      const exY = CY + Math.sin(exitAng) * AD;
-      const plX = CX + Math.cos(planetAng) * ORBIT_R;
-      const plY = CY + Math.sin(planetAng) * ORBIT_R;
-      for (let i = 1; i <= 42; i++)
-        pts.push({ x: exX + (plX - exX) * i / 42, y: exY + (plY - exY) * i / 42 });
-
-      return pts;
+      continueBtn(wrapper, done, isCorrect);
     }
   }
 

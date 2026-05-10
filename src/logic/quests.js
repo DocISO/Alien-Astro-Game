@@ -16,22 +16,22 @@ const QUEST_SCHEDULE = {
     { fraction: 0.52, id: "reactor" },
     { fraction: 0.86, id: "swingby" },
   ],
-  // Cruiser: 5 quests, all different types, no two of the same kind adjacent
+  // Cruiser: 5 quests, no two of the same kind adjacent
   cruiser: [
     { fraction: 0.11, id: "dosimeter" },
     { fraction: 0.28, id: "pulsar" },
     { fraction: 0.48, id: "reactor" },
-    { fraction: 0.67, id: "food_calc" },
+    { fraction: 0.67, id: "data_storage" },
     { fraction: 0.87, id: "swingby" },
   ],
-  // Colony: 7 quests, all 7 types once each, evenly distributed
+  // Colony: 7 quests — dosimeter repeats (periodic radiation checks on long missions)
   colony: [
     { fraction: 0.07, id: "dosimeter" },
     { fraction: 0.18, id: "government" },
     { fraction: 0.30, id: "data_storage" },
     { fraction: 0.43, id: "pulsar" },
     { fraction: 0.56, id: "reactor" },
-    { fraction: 0.70, id: "food_calc" },
+    { fraction: 0.70, id: "dosimeter" },
     { fraction: 0.88, id: "swingby" },
   ],
 };
@@ -73,13 +73,6 @@ const QUEST_DEFS = {
     title: "🔬 Fusionsreaktor kritisch!",
     story: "Der Bordcomputer meldet Instabilität im Reaktorkern. Du musst Temperatur, Magnetfeld und Brennstoffzufuhr in Balance bringen — zu viel von einem Parameter zerstört die Fusion.",
     penalty: { fuel: 0.08 },
-  },
-
-  food_calc: {
-    type: "food_calc",
-    title: "🥔 Versorgungsplanung",
-    story: "Der Chefkoch braucht deine Hilfe: Die Bevölkerung an Bord wächst. Er muss wissen, wie viel Nahrung in fünf Jahren gebraucht wird, um den Anbau jetzt anzupassen.",
-    penalty: { food: 0.10 },
   },
 
   swingby: {
@@ -150,21 +143,9 @@ function buildQuestEntries(shipClass, travelYears_crew, crew) {
       resolved: false,
       correct:  null,
     };
-    if (id === "food_calc") Object.assign(entry, buildFoodCalcData(crew));
-    if (id === "reactor")   Object.assign(entry, buildReactorData());
+    if (id === "reactor") Object.assign(entry, buildReactorData());
     return entry;
   });
-}
-
-function buildFoodCalcData(crew) {
-  const kgPerPerson = 250 + Math.floor(Math.random() * 101); // 250–350 kg/year
-  const births      = 2;
-  const deaths      = 1;
-  const years       = 5;
-  let   pop         = crew;
-  for (let y = 0; y < years; y++) pop += births - deaths;
-  const answerTons = Math.round(pop * kgPerPerson / 1000);
-  return { foodCalc: { initialCrew: crew, kgPerPerson, births, deaths, years, answerTons, finalPop: pop } };
 }
 
 function buildReactorData() {
@@ -182,5 +163,5 @@ function buildReactorData() {
 }
 
 if (typeof module !== "undefined") {
-  module.exports = { QUEST_DEFS, QUEST_SCHEDULE, buildQuestEntries, buildFoodCalcData, buildReactorData };
+  module.exports = { QUEST_DEFS, QUEST_SCHEDULE, buildQuestEntries, buildReactorData };
 }

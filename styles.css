@@ -690,23 +690,18 @@ canvas { display: block; }
 .rparam-btn:hover { background: var(--accent); color: #000; }
 .rparam-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
-/* ── Food Calc Quest ─────────────────────────────────────────── */
-.calc-problem    { background: rgba(255,255,255,0.04); border-radius: 6px; padding: 12px; margin-bottom: 10px; line-height: 1.8; }
-.calc-question   { font-weight: 700; color: var(--accent); margin-top: 8px; }
-.calc-hint       { font-size: 12px; color: var(--text-dim); }
-.calc-input-row  { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
-.calc-input {
-  flex: 1; padding: 8px 12px; background: #0a0a20; border: 1px solid var(--border);
-  color: var(--text-main); border-radius: 6px; font-size: 15px; font-family: var(--font-mono);
-}
-
 /* ── Swing-by Quest ──────────────────────────────────────────── */
-.swingby-canvas   { display: block; border: 1px solid var(--border); border-radius: 4px; max-width: 100%; user-select: none; }
-.swingby-attempts { font-size: 12px; color: var(--accent); font-family: var(--font-mono); margin-bottom: 4px; }
-.swingby-feedback { margin-top: 8px; display: flex; flex-direction: column; gap: 4px; }
-.swingby-fb-row   { font-size: 12px; padding: 5px 10px; border-radius: 4px; font-family: var(--font-mono); }
-.fb-ok  { background: rgba(0,255,136,0.1); color: #80ffbb; }
-.fb-err { background: rgba(255,80,80,0.1); color: #ffaaaa; }
+.swingby-canvas     { display: block; border: 1px solid var(--border); border-radius: 4px; max-width: 100%; }
+.swingby-btn-row    { display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+.swingby-option-btn {
+  flex: 1; min-width: 100px; padding: 10px 0; font-size: 15px; font-weight: 700;
+  font-family: var(--font-mono); background: transparent;
+  border: 2px solid; border-radius: 8px; cursor: pointer;
+  transition: background 0.15s, transform 0.1s;
+}
+.swingby-option-btn:hover  { background: rgba(255,255,255,0.07); transform: translateY(-1px); }
+.swingby-option-btn:active { transform: translateY(0); }
+.swingby-option-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
 
 /* ── Data Storage Quest ──────────────────────────────────────── */
 .alloc-grid      { display: flex; flex-direction: column; gap: 10px; margin-bottom: 10px; }
