@@ -629,27 +629,43 @@ const QuestPanel = (() => {
   // ── Quest 4: Swing-by Manöver (multiple choice) ───────────────────────────────
 
   function renderSwingby(wrapper, entry, done) {
-    const W = 450, H = 280;
-    const STAR_X = 295, STAR_Y = 140, STAR_R = 20;
+    const W = 460, H = 300;
+    // Star positioned centre-right so incoming path has room to loop around it
+    const STAR_X = 300, STAR_Y = 150, STAR_R = 22;
+    const PATH_COLOR   = "rgba(255,255,255,0.88)";
+    const PATH_DIM     = "rgba(255,255,255,0.15)";
 
-    // Three path options — shuffled so correct isn't always the same label
+    /*
+     * All three paths enter from the left.
+     * "correct" — hyperbolic slingshot: approaches from upper-left, curves
+     *   tightly around the star and exits lower-right.
+     * "crash"   — too steep: heads straight at the star's centre.
+     * "far"     — too shallow: barely curves, passes well below.
+     *
+     * Bezier seg = [x0,y0, cx1,cy1, cx2,cy2, x1,y1]
+     */
     const DEFS = [
       {
-        type: "correct", color: "#00e676",
-        // Sweeps around star from top-left, exits bottom-right — classic slingshot arc
-        seg: [10, 28, 90, -8, 405, 268, 440, 272],
+        type: "correct",
+        // Two-segment path: approach curve + exit curve, joined at periapsis
+        segs: [
+          [8, 40,  160, 20,  285, 80,  STAR_X - STAR_R - 4, STAR_Y - STAR_R - 4],
+          [STAR_X - STAR_R - 4, STAR_Y - STAR_R - 4,  STAR_X + 10, STAR_Y + STAR_R + 10,  390, 260,  452, 285],
+        ],
         wrongText: null,
       },
       {
-        type: "crash", color: "#ff5252",
-        // Heads almost straight into the star
-        seg: [10, 115, 145, 122, 260, 137, 277, 141],
+        type: "crash",
+        segs: [
+          [8, 145,  140, 148,  250, 150,  STAR_X - STAR_R, STAR_Y],
+        ],
         wrongText: "Zu nah am Stern — das Schiff würde in der Korona verglühen.",
       },
       {
-        type: "far", color: "#448aff",
-        // Barely deflected, passes well below star
-        seg: [10, 222, 150, 216, 340, 210, 440, 206],
+        type: "far",
+        segs: [
+          [8, 248,  150, 244,  360, 238,  452, 234],
+        ],
         wrongText: "Zu weit vom Stern — die Schwerkraft ist zu schwach für einen Bremseffekt.",
       },
     ];
@@ -676,8 +692,6 @@ const QuestPanel = (() => {
     const btns = DEFS.map((d, i) => {
       const b = document.createElement("button");
       b.className = "swingby-option-btn";
-      b.style.borderColor = d.color;
-      b.style.color       = d.color;
       b.textContent = `Pfad ${d.label}`;
       b.addEventListener("click", () => onSelect(i));
       btnRow.appendChild(b);
@@ -698,6 +712,7 @@ const QuestPanel = (() => {
     function drawArrowHead(p1, p2, color) {
       const angle = Math.atan2(p2.y - p1.y, p2.x - p1.x);
       const L = 10;
+      ctx.save();
       ctx.beginPath();
       ctx.moveTo(p2.x, p2.y);
       ctx.lineTo(p2.x - L*Math.cos(angle-0.42), p2.y - L*Math.sin(angle-0.42));
@@ -706,73 +721,117 @@ const QuestPanel = (() => {
       ctx.strokeStyle = color;
       ctx.lineWidth = 2;
       ctx.stroke();
+      ctx.restore();
+    }
+
+    function drawPath(d, dim) {
+      ctx.globalAlpha = dim ? 0.15 : 1.0;
+      ctx.strokeStyle = PATH_COLOR;
+      ctx.lineWidth   = 2.2;
+      ctx.setLineDash([]);
+      d.segs.forEach(seg => {
+        ctx.beginPath();
+        ctx.moveTo(seg[0], seg[1]);
+        ctx.bezierCurveTo(seg[2], seg[3], seg[4], seg[5], seg[6], seg[7]);
+        ctx.stroke();
+      });
+      ctx.globalAlpha = 1;
     }
 
     function drawScene(dimIdx) {
       ctx.clearRect(0, 0, W, H);
-      ctx.fillStyle = "#030312";
+
+      // Space background
+      ctx.fillStyle = "#04040f";
       ctx.fillRect(0, 0, W, H);
 
-      // Paths drawn first (star drawn on top covers crash path inside)
-      DEFS.forEach((d, i) => {
-        ctx.globalAlpha = (dimIdx === i) ? 0.18 : 1.0;
+      // Background stars
+      const rng = mulberry32(0xdeadbeef);
+      for (let s = 0; s < 90; s++) {
+        const sx = rng() * W, sy = rng() * H;
+        const sr = 0.4 + rng() * 1.0;
+        const sb = 0.3 + rng() * 0.6;
         ctx.beginPath();
-        ctx.moveTo(d.seg[0], d.seg[1]);
-        ctx.bezierCurveTo(d.seg[2], d.seg[3], d.seg[4], d.seg[5], d.seg[6], d.seg[7]);
-        ctx.strokeStyle = d.color;
-        ctx.lineWidth   = 2.5;
-        ctx.setLineDash([]);
-        ctx.stroke();
-        ctx.globalAlpha = 1;
-      });
+        ctx.arc(sx, sy, sr, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(200,210,255,${sb})`;
+        ctx.fill();
+      }
 
-      // Star glow (drawn on top, covers crash path inside star)
-      const glow = ctx.createRadialGradient(STAR_X, STAR_Y, 0, STAR_X, STAR_Y, STAR_R * 3.5);
-      glow.addColorStop(0, "rgba(255,230,60,0.55)");
-      glow.addColorStop(1, "rgba(255,130,0,0)");
+      // Gravity influence ring (dashed)
+      ctx.save();
+      ctx.setLineDash([4, 6]);
+      ctx.strokeStyle = "rgba(255,200,60,0.20)";
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(STAR_X, STAR_Y, STAR_R * 3.5, 0, Math.PI * 2);
+      ctx.arc(STAR_X, STAR_Y, STAR_R * 4.5, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      // Paths drawn first (star drawn on top masks crash segment inside)
+      DEFS.forEach((d, i) => drawPath(d, dimIdx === i));
+
+      // Star glow
+      const glow = ctx.createRadialGradient(STAR_X, STAR_Y, 0, STAR_X, STAR_Y, STAR_R * 4);
+      glow.addColorStop(0,   "rgba(255,230,60,0.60)");
+      glow.addColorStop(0.4, "rgba(255,140,20,0.25)");
+      glow.addColorStop(1,   "rgba(255,100,0,0)");
+      ctx.beginPath();
+      ctx.arc(STAR_X, STAR_Y, STAR_R * 4, 0, Math.PI * 2);
       ctx.fillStyle = glow;
       ctx.fill();
 
       // Star core
+      const core = ctx.createRadialGradient(STAR_X - 6, STAR_Y - 6, 2, STAR_X, STAR_Y, STAR_R);
+      core.addColorStop(0, "#fff9c4");
+      core.addColorStop(0.5, "#ffe844");
+      core.addColorStop(1, "#ff8c00");
       ctx.beginPath();
       ctx.arc(STAR_X, STAR_Y, STAR_R, 0, Math.PI * 2);
-      ctx.fillStyle = "#ffe844";
+      ctx.fillStyle = core;
       ctx.fill();
 
       // Star label
-      ctx.fillStyle = "rgba(255,230,100,0.65)";
-      ctx.font = "11px monospace";
+      ctx.fillStyle = "rgba(255,225,100,0.55)";
+      ctx.font = "10px monospace";
       ctx.textAlign = "center";
-      ctx.fillText("Zielstern", STAR_X, STAR_Y + STAR_R + 13);
+      ctx.fillText("Zielstern", STAR_X, STAR_Y + STAR_R + 14);
 
-      // Path labels, arrows, crash marker
+      // Path labels, ship icon, arrowheads, crash marker
       DEFS.forEach((d, i) => {
-        const alpha = (dimIdx === i) ? 0.18 : 1.0;
+        const alpha = (dimIdx === i) ? 0.15 : 1.0;
         ctx.globalAlpha = alpha;
+        const firstSeg = d.segs[0];
 
-        // Label at path start
-        ctx.fillStyle  = d.color;
-        ctx.font       = "bold 12px monospace";
+        // Label near entry point
+        ctx.fillStyle  = "rgba(255,255,255,0.82)";
+        ctx.font       = "bold 11px monospace";
         ctx.textAlign  = "left";
-        ctx.fillText(`Pfad ${d.label}`, d.seg[0] + 5, d.seg[1] - 10);
+        ctx.fillText(`${d.label}`, firstSeg[0] + 4, firstSeg[1] - 8);
+
+        // Ship icon at path start
+        ctx.font = "13px serif";
+        ctx.fillText("🚀", firstSeg[0] - 8, firstSeg[1] + 5);
 
         if (d.type === "crash") {
-          // Explosion at star surface
           ctx.font = "18px serif";
           ctx.textAlign = "center";
-          ctx.fillText("💥", STAR_X - STAR_R - 1, STAR_Y + 4);
+          ctx.fillText("💥", STAR_X - STAR_R + 2, STAR_Y + 4);
         } else {
-          // Arrow head at end of path
-          drawArrowHead(bezierPt(d.seg, 0.93), bezierPt(d.seg, 1.0), d.color);
-          ctx.fillStyle = d.color;
-          ctx.font = "10px monospace";
-          ctx.textAlign = "right";
-          ctx.fillText("→ Ziel", W - 4, d.seg[7] - 7);
+          const lastSeg = d.segs[d.segs.length - 1];
+          drawArrowHead(bezierPt(lastSeg, 0.92), bezierPt(lastSeg, 1.0), PATH_COLOR);
         }
         ctx.globalAlpha = 1;
       });
+    }
+
+    // Simple seedable RNG so background stars are identical every redraw
+    function mulberry32(seed) {
+      return function() {
+        seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+        let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+        t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+        return ((t ^ t >>> 14) >>> 0) / 4294967296;
+      };
     }
 
     drawScene(-1);
@@ -787,7 +846,6 @@ const QuestPanel = (() => {
       const correctDef  = DEFS[correctIdx];
       const selectedDef = DEFS[idx];
 
-      // Dim the wrong choice
       drawScene(isCorrect ? -1 : idx);
 
       if (isCorrect) {

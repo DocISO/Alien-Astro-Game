@@ -696,8 +696,9 @@ canvas { display: block; }
 .swingby-option-btn {
   flex: 1; min-width: 100px; padding: 10px 0; font-size: 15px; font-weight: 700;
   font-family: var(--font-mono); background: transparent;
-  border: 2px solid; border-radius: 8px; cursor: pointer;
-  transition: background 0.15s, transform 0.1s;
+  border: 2px solid rgba(255,255,255,0.55); color: rgba(255,255,255,0.88);
+  border-radius: 8px; cursor: pointer;
+  transition: background 0.15s, transform 0.1s, border-color 0.15s;
 }
 .swingby-option-btn:hover  { background: rgba(255,255,255,0.07); transform: translateY(-1px); }
 .swingby-option-btn:active { transform: translateY(0); }

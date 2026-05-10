@@ -31,7 +31,7 @@ const QUEST_SCHEDULE = {
     { fraction: 0.30, id: "data_storage" },
     { fraction: 0.43, id: "pulsar" },
     { fraction: 0.56, id: "reactor" },
-    { fraction: 0.70, id: "dosimeter" },
+    { fraction: 0.70, id: "pulsar" },
     { fraction: 0.88, id: "swingby" },
   ],
 };
