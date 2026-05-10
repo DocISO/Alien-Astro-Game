@@ -286,21 +286,31 @@ const QuestPanel = (() => {
   // ── Quest 3: Fusion Reactor Balance (dynamic) ────────────────────────────────
 
   function renderReactor(wrapper, entry, done) {
-    // Physics state — all values 0–100
-    let T = 62, M = 70, F = 57;
-    let stableTicks = 0;
+    // Start in the orange warn zone — player must bring all three into green first
+    let T = 88, M = 43, F = 30;
+    let stableTicks  = 0;
     let tickInterval = null;
     let animFrame    = null;
     let finished     = false;
+    let oscillPhase  = 0;   // drives the slowly oscillating OK-zone boundaries
 
-    // OK zones (all three in range → stable)
-    const T_OK  = [55, 82], M_OK  = [50, 78], F_OK  = [38, 72];
-    // Warn zones — needle turns orange, status shows "KRITISCH"
+    // Base OK zones — boundaries drift ±4-5 units via sine wave each tick
+    const T_OK_BASE = [55, 82], M_OK_BASE = [50, 78], F_OK_BASE = [38, 72];
+    // Warn zones (static) — outside OK but inside here: orange needle, "gegensteuern"
     const T_WRN = [32, 90], M_WRN = [26, 88], F_WRN = [18, 84];
-    // Danger zones — breaching this triggers KI intervention
+    // Danger zones (static) — breaching triggers KI
     const T_DNG = [12, 97], M_DNG = [10, 95], F_DNG = [8, 90];
 
-    const STABLE_NEEDED = 20; // ticks at 1300 ms ≈ 26 s
+    const STABLE_NEEDED = 12; // ticks × 1300 ms ≈ 15 s
+
+    // Current oscillated OK boundaries (called every tick + button press)
+    function getDynOK() {
+      return {
+        t: [T_OK_BASE[0] + 5 * Math.sin(oscillPhase * 0.30),        T_OK_BASE[1] + 5 * Math.sin(oscillPhase * 0.30)],
+        m: [M_OK_BASE[0] + 4 * Math.sin(oscillPhase * 0.25 + 1.5),  M_OK_BASE[1] + 4 * Math.sin(oscillPhase * 0.25 + 1.5)],
+        f: [F_OK_BASE[0] + 3 * Math.sin(oscillPhase * 0.20 + 3.0),  F_OK_BASE[1] + 3 * Math.sin(oscillPhase * 0.20 + 3.0)],
+      };
+    }
 
     const body = document.createElement("div");
     body.className = "reactor-body";
@@ -389,8 +399,9 @@ const QuestPanel = (() => {
       plasmaPhase += 0.18;
       const flicker = 0.9 + 0.1 * Math.sin(plasmaPhase * 2.3) + 0.05 * Math.sin(plasmaPhase * 5.1);
       const pSize   = (16 + F * 0.26) * flicker;
-      const inOK    = T >= T_OK[0] && T <= T_OK[1] && M >= M_OK[0] && M <= M_OK[1] && F >= F_OK[0] && F <= F_OK[1];
-      const hue     = inOK ? 160 + 20 * Math.sin(plasmaPhase * 0.5) : 15 + T * 0.7;
+      const dok  = getDynOK();
+      const inOK = T >= dok.t[0] && T <= dok.t[1] && M >= dok.m[0] && M <= dok.m[1] && F >= dok.f[0] && F <= dok.f[1];
+      const hue  = inOK ? 160 + 20 * Math.sin(plasmaPhase * 0.5) : 15 + T * 0.7;
       const grad    = ctx.createRadialGradient(cx, cy, 0, cx, cy, pSize);
       grad.addColorStop(0,   `hsla(${hue},100%,80%,1)`);
       grad.addColorStop(0.5, `hsla(${hue},100%,55%,0.7)`);
@@ -414,10 +425,11 @@ const QuestPanel = (() => {
 
     // ── Gauge renderer ───────────────────────────────────────────────────────
     function updateGauges() {
+      const dok = getDynOK();
       const params = [
-        { id: "t", val: T, ok: T_OK, wrn: T_WRN },
-        { id: "m", val: M, ok: M_OK, wrn: M_WRN },
-        { id: "f", val: F, ok: F_OK, wrn: F_WRN },
+        { id: "t", val: T, ok: dok.t, wrn: T_WRN },
+        { id: "m", val: M, ok: dok.m, wrn: M_WRN },
+        { id: "f", val: F, ok: dok.f, wrn: F_WRN },
       ];
       params.forEach(({ id, val, ok, wrn }) => {
         const valEl    = document.getElementById(`rv-${id}`);
@@ -427,8 +439,8 @@ const QuestPanel = (() => {
         if (!valEl) return;
         valEl.textContent   = Math.round(val);
         needleEl.style.left = val + "%";
-        okEl.style.left     = ok[0]  + "%";
-        okEl.style.width    = (ok[1]  - ok[0])  + "%";
+        okEl.style.left     = ok[0].toFixed(1) + "%";
+        okEl.style.width    = (ok[1] - ok[0]).toFixed(1) + "%";
         if (wrnEl) {
           wrnEl.style.left  = wrn[0] + "%";
           wrnEl.style.width = (wrn[1] - wrn[0]) + "%";
@@ -436,14 +448,16 @@ const QuestPanel = (() => {
         const inOK   = val >= ok[0]  && val <= ok[1];
         const inWarn = val >= wrn[0] && val <= wrn[1];
         const color  = inOK ? "var(--success)" : inWarn ? "var(--warn)" : "var(--danger)";
-        valEl.style.color             = color;
-        needleEl.style.background     = color;
+        valEl.style.color         = color;
+        needleEl.style.background = color;
       });
     }
 
     // ── Physics tick ─────────────────────────────────────────────────────────
     function tick() {
       if (finished) return;
+
+      oscillPhase += 0.15;   // advances the OK-zone oscillation
 
       // Natural drift — slow enough to react to
       T += 0.45 + Math.random() * 0.08;   // heat builds up
@@ -470,8 +484,9 @@ const QuestPanel = (() => {
         return;
       }
 
-      // Check stable
-      const inOK = T >= T_OK[0] && T <= T_OK[1] && M >= M_OK[0] && M <= M_OK[1] && F >= F_OK[0] && F <= F_OK[1];
+      // Check stable — use current oscillated OK zone
+      const dok  = getDynOK();
+      const inOK = T >= dok.t[0] && T <= dok.t[1] && M >= dok.m[0] && M <= dok.m[1] && F >= dok.f[0] && F <= dok.f[1];
       if (inOK) {
         stableTicks++;
         const pct = Math.min(100, stableTicks / STABLE_NEEDED * 100);
@@ -499,7 +514,8 @@ const QuestPanel = (() => {
       const statusEl = document.getElementById("react-status");
       const hintEl   = document.getElementById("react-hint");
       if (!statusEl) return;
-      const inOK   = T >= T_OK[0]  && T <= T_OK[1]  && M >= M_OK[0]  && M <= M_OK[1]  && F >= F_OK[0]  && F <= F_OK[1];
+      const dok    = getDynOK();
+      const inOK   = T >= dok.t[0] && T <= dok.t[1] && M >= dok.m[0] && M <= dok.m[1] && F >= dok.f[0] && F <= dok.f[1];
       const inWarn = T >= T_WRN[0] && T <= T_WRN[1] && M >= M_WRN[0] && M <= M_WRN[1] && F >= F_WRN[0] && F <= F_WRN[1];
       if (inOK) {
         statusEl.textContent = "✅ STABIL — Fusion läuft!";
@@ -510,9 +526,9 @@ const QuestPanel = (() => {
         statusEl.style.color = "var(--warn)";
         if (hintEl) {
           const hints = [];
-          if (T < T_OK[0]) hints.push("T zu niedrig"); else if (T > T_OK[1]) hints.push("T zu hoch");
-          if (M < M_OK[0]) hints.push("M zu schwach"); else if (M > M_OK[1]) hints.push("M zu stark");
-          if (F < F_OK[0]) hints.push("F zu wenig");  else if (F > F_OK[1]) hints.push("F zu viel");
+          if (T < dok.t[0]) hints.push("T zu niedrig"); else if (T > dok.t[1]) hints.push("T zu hoch");
+          if (M < dok.m[0]) hints.push("M zu schwach"); else if (M > dok.m[1]) hints.push("M zu stark");
+          if (F < dok.f[0]) hints.push("F zu wenig");  else if (F > dok.f[1]) hints.push("F zu viel");
           hintEl.textContent = hints.join("  ·  ") || "Justiere die Parameter …";
         }
       } else {
